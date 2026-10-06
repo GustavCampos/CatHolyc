@@ -454,7 +454,7 @@ OperacaoBinaria {
 
 Note que a estrutura reflete exatamente a precedência definida em 3.7: `em_comunhão_com` (nível `ExpressaoE`) fica na raiz, com as duas comparações relacionais (nível mais interno) como filhas — sem qualquer ambiguidade, e sem que o parser precise consultar tabela de precedência em tempo de execução, já que a hierarquia está embutida na própria cadeia de chamadas `parseExpressaoOu → parseExpressaoE → ... → parseFator`.
 
-## 4.5 Tratamento de Erros Sintáticos
+## 4.5 Tratamento de Erros Sintáticos~
 
 Sempre que `consome(categoriaEsperada)` encontra um token de categoria diferente da esperada, o parser **interrompe imediatamente o processamento** (sem tentativa de recuperação, ao contrário do léxico) e reporta:
 
