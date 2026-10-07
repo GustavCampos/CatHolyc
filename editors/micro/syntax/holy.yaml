@@ -1,0 +1,49 @@
+filetype: holy
+detect:
+  filename: "\\.holy$"
+rules:
+  # block comment |> ... <| (can span lines)
+  - comment:
+      start: "\\|>"
+      end: "<\\|"
+      rules: []
+  # line comment glosa(...)
+  - comment: "glosa\\([^)]*\\)"
+  # strings "..." with escapes, no newline
+  - constant.string:
+      start: "\""
+      end: "(\"|$)"
+      skip: "\\\\."
+      rules:
+        - constant.specialChar: "\\\\."
+  # real before int so 3.14 wins over 3
+  - constant.number: "\\b[0-9]+\\.[0-9]+\\b"
+  - constant.number: "\\b[0-9]+\\b"
+  # booleans
+  - constant.bool.true: "\\bverdade\\b"
+  - constant.bool.false: "\\bfalsidade\\b"
+  # types
+  - type: "\\b(capítulo|versículo|salmo|dogma)\\b"
+  # decl keywords (own color, distinct from types + names)
+  - preproc: "\\b(mandamento|preceito)\\b"
+  # NOTE: micro monokai paints statement == symbol.operator (same pink).
+  # Operators use `default` (whitish grey) so literals
+  # (numbers/bools, purple family) keep their own color.
+  - default: "\\bseja\\b"
+  # operators: arithmetic
+  - default: "\\b(somado_a|privado_de|multiplicado_por|partilhado_entre|dízimo_de)\\b"
+  # operators: relational + logical
+  - default: "\\b(exaltado_sobre|submisso_a|não_abaixo_de|não_acima_de|conforme_a|dissonante_de|em_comunhão_com|ou_porventura|não_seja)\\b"
+  # control / io
+  - statement: "\\b(caso|enquanto|peregrine|em_cada|cessai|perseverai|oficio|retorne|proclame|confesse)\\b"
+  # $variables — own color, distinct from types above
+  # must come after keywords so $caso stays identifier
+  - special: "\\$[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*"
+  # program delimiters + else branches
+  # NOTE: micro lets lower rules overwrite upper ones,
+  # so long forms come LAST to beat their prefixes.
+  - statement: "\\b(em_nome_do_pai|assim_seja_em_seu_nome_amem|amém|doutra_sorte)\\b"
+  - statement: "\\b(amém_senhor|doutra_sorte_caso)\\b"
+  # brackets + arg separator
+  - symbol.brackets: "[\\(\\)]"
+  - default: ","

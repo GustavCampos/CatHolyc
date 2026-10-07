@@ -218,10 +218,10 @@ O mesmo princípio aplica-se, por completude, a literais numéricos: `18` e `18.
 Quando o analisador léxico encontra um caractere que não inicia nenhuma transição válida em Σ (por exemplo `#`, `@`, `$` sozinho ou `$` seguido de dígito), uma palavra sem prefixo `$` (por exemplo `idade`), ou uma cadeia que inicia um padrão válido mas não o completa corretamente (por exemplo um literal de texto sem aspas de fechamento, ou um número como `12.` sem dígitos após o ponto), ele reporta um **erro léxico** e interrompe o reconhecimento daquele lexema, emitindo mensagem no formato:
 
 ```
-Erro léxico: símbolo ou lexema inválido '<lexema>' na linha <N>
+Erro léxico: símbolo ou lexema inválido '<lexema>' na linha <N>, coluna <C>
 ```
 
-onde `<N>` é o número de linha corrente, obtido pelo contador incrementado a cada quebra de linha consumida (seção 2.4). Após reportar o erro, o analisador aplica recuperação em modo pânico (*panic mode*): descarta o caractere ou lexema inválido e retoma o reconhecimento a partir do próximo caractere, permitindo que outros erros na mesma entrada sejam identificados em uma única execução, em vez de interromper o processo no primeiro erro encontrado.
+onde `<N>`/`<C>` são linha e coluna correntes (contador incrementado a cada quebra de linha consumida, seção 2.4). Após reportar o erro, o analisador aplica recuperação em modo pânico (*panic mode*): descarta o caractere ou lexema inválido e retoma o reconhecimento a partir do próximo caractere, permitindo que outros erros na mesma entrada sejam identificados em uma única execução, em vez de interromper o processo no primeiro erro encontrado.
 
 ---
 
@@ -255,10 +255,10 @@ T = { em_nome_do_pai, assim_seja_em_seu_nome_amem,
       exaltado_sobre, submisso_a, não_abaixo_de, não_acima_de, conforme_a, dissonante_de,
       em_comunhão_com, ou_porventura, não_seja,
       "(", ")", ",",
-      IDENT, NUM_INT, NUM_REAL, TEXTO }
+      IDENT, NUM_INT, NUM_REAL, TEXTO, EOF }
 ```
 
-`IDENT` (`\$[letra][letra|dígito|_]*`, ex. `$idade`), `NUM_INT`, `NUM_REAL` e `TEXTO` são os terminais “lexicais” definidos por expressão regular na seção 2 (categorias IDENTIFICADOR, NUM_INTEIRO, NUM_REAL e LITERAL_TEXTO), tratados aqui como átomos indivisíveis, já resolvidos pelo analisador léxico. O parser remove o prefixo `$` e a AST guarda o nome puro (`idade`); o gerador Python emite sem `$`.
+`IDENT` (`\$[letra][letra|dígito|_]*`, ex. `$idade`), `NUM_INT`, `NUM_REAL` e `TEXTO` são os terminais “lexicais” definidos por expressão regular na seção 2 (categorias IDENTIFICADOR, NUM_INTEIRO, NUM_REAL e LITERAL_TEXTO), tratados aqui como átomos indivisíveis, já resolvidos pelo analisador léxico. Nomes exatos no código (`lexer/TokenType.py`): `IDENTIFIER`, `NUMBER_INT`, `NUMBER_REAL`, `TEXT_LITERAL`, `LPAREN`, `RPAREN`, `COMMA`, `EOF` (mais um `TokenType` por palavra reservada: `CAPITULO`, `MANDAMENTO`, `CASO`, …). `EOF` é anexado ao fim da lista de tokens e consumido pelo parser no fim de `Programa`. O parser remove o prefixo `$` e a AST guarda o nome puro (`idade`); o gerador Python emite sem `$`.
 
 **S (símbolo inicial):** `S = Programa`
 
@@ -331,12 +331,12 @@ ComandoPara     ::= "peregrine" Atribuicao ExpressaoOu "amém" Atribuicao Bloco 
 ComandoParaCada ::= "em_cada" IDENT IDENT Bloco "amém_senhor"
 ```
 
-Observação de projeto: o vocabulário fornecido define apenas o mapeamento lexical de `for` → `peregrine` e `for each` → `em_cada`, sem especificar a sintaxe completa dessas estruturas. O grupo optou por:
+Observação de projeto (confirmada na implementação): o vocabulário fornecido define apenas o mapeamento lexical de `for` → `peregrine` e `for each` → `em_cada`; a sintaxe acima é a implementada em `parser/parser.py`:
 
 - em `ComandoPara`, reaproveitar `Atribuicao` (que já termina em `amém`) para a inicialização e o incremento, e um `ExpressaoOu` terminado por `amém` para a condição — mantendo o uso de `amém` como separador de cláusulas, análogo ao `;` do `for` em C (`peregrine <inicialização> <condição> amém <incremento> <bloco> amém_senhor`);
 - em `ComandoParaCada`, dois identificadores consecutivos representam, respectivamente, a variável de iteração e a coleção percorrida (equivalente a um `for each` implícito, sem uma palavra reservada para “em”).
 
-Essas decisões devem ser confirmadas/ajustadas pelo grupo conforme a implementação real do parser; a estrutura de `ComandoSe`/`ComandoEnquanto`, baseada diretamente no exemplo do enunciado, é a que possui maior grau de certeza.
+A estrutura de `ComandoSe`/`ComandoEnquanto`, baseada diretamente no exemplo do enunciado, é a que possui maior grau de certeza.
 
 ```
 Cessai     ::= "cessai" "amém"
@@ -403,7 +403,7 @@ Pontos importantes desta subseção:
 1. **Não ambiguidade e precedência.** Cada nível de operador (`ou_porventura` < `em_comunhão_com` < `não_seja` < relacionais < aditivos < multiplicativos, do menor para o maior) só pode combinar operandos do nível imediatamente superior, o que fixa uma única árvore de derivação possível para qualquer expressão válida — eliminando a ambiguidade clássica de gramáticas do tipo `E ::= E op E`. Por exemplo, `2 somado_a 3 multiplicado_por 4` é necessariamente analisado como `2 somado_a (3 multiplicado_por 4)`, pois `ExpressaoMul` (multiplicação) só é alcançada a partir de `ExpressaoAdd` (soma) em um nível mais interno da derivação.
 2. **Ausência de recursão à esquerda.** Todas as repetições (`{ }`) substituem produções que, em BNF clássico, seriam recursivas à esquerda (ex.: em vez de `ExpressaoAdd ::= ExpressaoAdd OpAdd ExpressaoMul | ExpressaoMul`, usa-se `ExpressaoAdd ::= ExpressaoMul { OpAdd ExpressaoMul }`). Isso é o que permite implementação direta por descida recursiva sem entrar em looping infinito, já que cada não terminal, ao ser invocado, consome ao menos um símbolo antes de qualquer nova chamada recursiva à esquerda.
 3. **Agrupamento com parênteses.** A alternativa `"(" ExpressaoOu ")"` em `Fator` permite reiniciar a precedência dentro de um grupo, possibilitando expressões como `($idade somado_a 1) multiplicado_por 2`.
-4. **Extensão de sinal negativo.** A alternativa `"privado_de" Fator` em `Fator` (reutilizando a palavra reservada de subtração como operador unário de negação, ex.: `privado_de 5`) não decorre diretamente do vocabulário fornecido, mas foi incluída para permitir literais numéricos negativos; pode ser removida caso o grupo não a implemente.
+4. **Extensão de sinal negativo.** A alternativa `"privado_de" Fator` em `Fator` (reutilizando a palavra reservada de subtração como operador unário de negação, ex.: `privado_de 5`) não decorre diretamente do vocabulário fornecido, mas está implementada (parser + semântica + codegen emite `-Fator`).
 
 ## 3.9 Verificação com o Programa de Exemplo
 
@@ -437,7 +437,7 @@ O parser implementado é um **analisador preditivo por descida recursiva (LL(1))
 | `DeclConst` | `mandamento ...` | `DeclConst { tipo, nome, valor }` |
 | `DeclVar` | `preceito ...` | `DeclVar { tipo, nome, valor? }` |
 | `Atribuicao` | `IDENT seja ... amém` | `Atribuicao { nome, valor }` |
-| `ComandoSe` | `caso ... doutra_sorte_caso ... doutra_sorte ... amém_senhor` | `Se { condicao, entao, senaoSe: [(condicao, bloco)], senao? }` |
+| `ComandoSe` | `caso ... doutra_sorte_caso ... doutra_sorte ... amém_senhor` | `Se { condicao, entao, senaoSe: [RamoSenaoSe], senao? }` onde `RamoSenaoSe { condicao, bloco, linha }` |
 | `ComandoEnquanto` | `enquanto ... amém_senhor` | `Enquanto { condicao, corpo }` |
 | `ComandoPara` | `peregrine ... amém_senhor` | `Para { init, condicao, incremento, corpo }` |
 | `ComandoParaCada` | `em_cada ... amém_senhor` | `ParaCada { variavel, colecao, corpo }` |
@@ -458,39 +458,42 @@ Este mapeamento é o que o grupo deve estar apto a apresentar/defender: para cad
 
 ## 4.3 Representação da AST
 
-A seguir, os tipos de nó em notação independente de linguagem (equivalente a *interfaces*/`structs`; deve ser adaptada à linguagem de implementação escolhida pelo grupo):
+A seguir, os tipos de nó exatamente como implementados em `parser/ast_nodes.py` (dataclasses; todo nó carrega `linha: int`; `Programa.linha` tem default `1`):
 
 ```
-Programa       { comandos: Comando[] }
+Programa       { comandos: Comando[], linha: int = 1 }
 
-DeclConst      { tipo: Tipo, nome: string, valor: Expressao }
-DeclVar        { tipo: Tipo, nome: string, valor: Expressao | null }
-Atribuicao     { nome: string, valor: Expressao }
+DeclConst      { tipo: Tipo, nome: string, valor: Expressao, linha: int }
+DeclVar        { tipo: Tipo, nome: string, valor: Expressao | null, linha: int }
+Atribuicao     { nome: string, valor: Expressao, linha: int }
 
+RamoSenaoSe    { condicao: Expressao, bloco: Comando[], linha: int }
 Se             { condicao: Expressao, entao: Comando[],
-                 senaoSe: { condicao: Expressao, bloco: Comando[] }[],
-                 senao: Comando[] | null }
-Enquanto       { condicao: Expressao, corpo: Comando[] }
+                 senaoSe: RamoSenaoSe[],
+                 senao: Comando[] | null, linha: int }
+Enquanto       { condicao: Expressao, corpo: Comando[], linha: int }
 Para           { init: Atribuicao, condicao: Expressao,
-                 incremento: Atribuicao, corpo: Comando[] }
-ParaCada       { variavel: string, colecao: string, corpo: Comando[] }
+                 incremento: Atribuicao, corpo: Comando[], linha: int }
+ParaCada       { variavel: string, colecao: string, corpo: Comando[], linha: int }
 
-Saida          { expressao: Expressao }
-Entrada        { variavel: string }
+Saida          { expressao: Expressao, linha: int }
+Entrada        { variavel: string, linha: int }
 
-Cessai         { }
-Perseverai     { }
-Param          { tipo: Tipo, nome: string }
-DefFuncao      { tipo: Tipo, nome: string, params: Param[], corpo: Comando[] }
-Retorne        { valor: Expressao | null }
-Chamada        { nome: string, args: Expressao[] }
+Cessai         { linha: int }
+Perseverai     { linha: int }
+Param          { tipo: Tipo, nome: string, linha: int }
+DefFuncao      { tipo: Tipo, nome: string, params: Param[], corpo: Comando[], linha: int }
+Retorne        { valor: Expressao | null, linha: int }
+Chamada        { nome: string, args: Expressao[], linha: int }
 
 // nós de expressão (Expressao = uma das alternativas abaixo)
-OperacaoBinaria { operador: string, esquerda: Expressao, direita: Expressao }
-OperacaoUnaria  { operador: string, operando: Expressao }
-Identificador   { nome: string }
-Literal         { tipo: "int"|"float"|"texto"|"bool", valor: any }
+OperacaoBinaria { operador: string, esquerda: Expressao, direita: Expressao, linha: int }
+OperacaoUnaria  { operador: string, operando: Expressao, linha: int }
+Identificador   { nome: string, linha: int }
+Literal         { tipo: "int"|"float"|"texto"|"bool", valor: any, linha: int }
 ```
+
+`Tipo` canônico no analisador: `capítulo | versículo | salmo | dogma` (literais `int/float/texto/bool` normalizados na entrada).
 
 Todo nó carrega também a **linha** do token que o originou (herdada do token léxico), usada tanto para diagnósticos de erro quanto, posteriormente, para geração de código com rastreabilidade.
 
@@ -514,19 +517,19 @@ OperacaoBinaria {
 
 Note que a estrutura reflete exatamente a precedência definida em 3.7: `em_comunhão_com` (nível `ExpressaoE`) fica na raiz, com as duas comparações relacionais (nível mais interno) como filhas — sem qualquer ambiguidade, e sem que o parser precise consultar tabela de precedência em tempo de execução, já que a hierarquia está embutida na própria cadeia de chamadas `parseExpressaoOu → parseExpressaoE → ... → parseFator`.
 
-## 4.5 Tratamento de Erros Sintáticos~
+## 4.5 Tratamento de Erros Sintáticos
 
-Sempre que `consome(categoriaEsperada)` encontra um token de categoria diferente da esperada, o parser **interrompe imediatamente o processamento** (sem tentativa de recuperação, ao contrário do léxico) e reporta:
+Sempre que `consome(categoriaEsperada)` encontra um token de categoria diferente da esperada, o parser **interrompe imediatamente o processamento** (sem tentativa de recuperação, ao contrário do léxico) e reporta (formato exato de `parser/parser.py`):
 
 ```
-Erro sintático: linha <N> — token encontrado '<lexema>' (<categoria>), esperado '<elemento esperado>'
+Erro sintático: linha <N> — encontrado '<lexema>' (<categoria>), esperado '<elemento esperado>'
 ```
 
 Exemplos:
 
-- Entrada `preceito capítulo $idade 21 amém` (faltando `seja`): `Erro sintático: linha 3 — token encontrado NUM_INT '21', esperado 'seja'`.
-- Entrada `caso $idade exaltado_sobre $maioridade` sem bloco nem `amém_senhor` antes do fim do arquivo: `Erro sintático: linha 5 — token encontrado EOF, esperado um comando ou 'amém_senhor'`.
-- Entrada com parêntese não fechado `($idade somado_a 1`: `Erro sintático: linha 4 — token encontrado 'amém', esperado ')'`.
+- Entrada `preceito capítulo $idade 21 amém` (faltando `seja`): `Erro sintático: linha 3 — encontrado '21' (NUMBER_INT), esperado 'seja'`.
+- Entrada `caso $idade exaltado_sobre $maioridade` sem bloco nem `amém_senhor` antes do fim do arquivo: `Erro sintático: linha 5 — encontrado 'EOF' (EOF), esperado um comando ou 'amém_senhor'`.
+- Entrada com parêntese não fechado `($idade somado_a 1`: `Erro sintático: linha 4 — encontrado 'amém' (AMEM), esperado ')'`.
 
 O `<elemento esperado>` deve ser preenchido com o terminal (ou conjunto FIRST do não terminal, quando a produção tiver alternativas) previsto pela gramática no ponto da falha — informação que a própria função `parseX()` já possui, pois é ela quem decide qual `consome(...)` chamar.
 
@@ -586,7 +589,7 @@ Fail-fast: primeiro erro aborta (diferente do léxico, que acumula em panic-mode
 
 # 6. Geração de Código Python
 
-Implementação: `codegen/py_generator.py`, API `generate(programa) -> str`. Indentação 4 espaços, pilha de indentação; `amém_senhor` só desempilha, não emite nada. Cabeçalho `# em_nome_do_pai`; `amém` = quebra de linha.
+Implementação: `codegen/py_generator.py`, API `generate(programa, include_line_comments=False) -> str` (`cli.py` chama `generate(prog)` sem flag ⇒ saída limpa). Indentação 4 espaços, pilha de indentação; `amém_senhor` só desempilha, não emite nada. Cabeçalho `# em_nome_do_pai`; `amém` = quebra de linha.
 
 ## 6.1 Mapeamento Holy → Python
 
@@ -622,7 +625,7 @@ Implementação: `codegen/py_generator.py`, API `generate(programa) -> str`. Ind
 3. **Sombreamento:** gerador mantém env de escopos espelhando o analisador; nome sombreado ou colisão de UPPER ganha sufixo `__N` (Python não tem escopo de bloco).
 4. **Sem init:** `preceito` sem `seja` recebe zero padrão (Python exige vínculo); `--strict` transforma em erro.
 5. **`confesse dogma`:** `input().strip().lower() in ("verdade", "true", "1", "sim")`.
-6. **Rastreabilidade:** `generate(prog, include_line_comments=True)` anexa ` # linha N`; CLI não ativa por padrão (saída limpa = golden).
+6. **Rastreabilidade:** `generate(programa, include_line_comments=True)` anexa ` # linha N`; default é `False` e a CLI não ativa (saída limpa = golden).
 
 ## 6.3 Exemplo (saída real do gerador)
 
@@ -646,6 +649,8 @@ Stdout ao executar: `É maior de idade e estudante.`
 # 7. Testes, CLI e Erros Unificados
 
 ## 7.1 Matriz (128 testes, `python -m pytest -q`)
+
+> Contagem = casos executados (inclui `parametrize ×7` programas). Contando `def test` no código: E2E tem 2 defs (14 casos), CLI tem 12 defs (24 casos).
 
 | Camada | Arquivo | Qtd | O que cobre |
 |---|---|---|---|
@@ -682,3 +687,37 @@ Erro semântico: linha <N> — <msg>
 ```
 
 Léxico acumula (panic-mode, resume próximo char); parser e semântica fail-fast no primeiro erro.
+
+---
+
+# 8. Realce de sintaxe no micro
+
+Arquivo: `editors/micro/syntax/holy.yaml` (detecta `*.holy`).
+
+Instalar:
+
+```sh
+mkdir -p ~/.config/micro/syntax
+cp editors/micro/syntax/holy.yaml ~/.config/micro/syntax/holy.yaml
+```
+
+Reinicie o micro e abra um `.holy` — as cores aplicam sozinhas.
+
+Mapa de cores (monokai/default):
+
+| Grupo | Cor (monokai) | O que pinta |
+|---|---|---|
+| `preproc` | laranja | `mandamento`, `preceito` |
+| `type` | ciano | `capítulo`, `versículo`, `salmo`, `dogma` |
+| `special` | verde | `$variáveis` (qualquer `$nome`, inclusive `$caso`) |
+| `statement` | rosa | estrutura: `caso`, `doutra_sorte[_caso]`, `enquanto`, `peregrine`, `em_cada`, `cessai`, `perseverai`, `oficio`, `retorne`, `proclame`, `confesse`, `em_nome_do_pai`, `amém[_senhor]`, `assim_seja_em_seu_nome_amem` |
+| `default` | branco-cinza | operadores: `seja`, `somado_a`, `privado_de`, `multiplicado_por`, `partilhado_entre`, `dízimo_de`, relacionais, lógicos, `,` |
+| `constant.string` | amarelo | `"texto"` |
+| `constant.number` / `constant.bool.*` | roxo | `18`, `3.14`, `verdade`, `falsidade` |
+| `comment` | cinza | `glosa(...)`, `\|> ... <\|` |
+
+Notas:
+
+- Só colore (regex por linha/bloco); não valida código. O linter de verdade é a CLI: `python cli.py prog.holy --run` (erros em português no stderr, saída 1).
+- Regras longas vêm por último no YAML (`amém_senhor` depois de `amém`, `doutra_sorte_caso` depois de `doutra_sorte`), porque no micro a regra de baixo sobrescreve a de cima.
+- Operadores usam `default` de propósito: no monokai `statement == symbol.operator` (mesmo rosa), e `constant` colidiria com números/bools (roxo).
