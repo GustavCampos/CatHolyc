@@ -153,7 +153,7 @@ Toda cadeia de entrada é, portanto, um elemento de Σ*, e cada categoria de tok
 | DELIM_FIM_PROG | `assim_seja_em_seu_nome_amem` | `assim_seja_em_seu_nome_amem` | Marca o fim do programa |
 | BRANCO | `[ \t]+` | — | Espaço/tabulação; descartado, não gera token |
 | QUEBRA_LINHA | `\r\n|\n` | — | Incrementa o contador de linhas; descartada, não gera token |
-| COMENTÁRIO | `glosa\(([^)]*)\)` | `glosa(explica o versículo)` | Extensão opcional (ver 2.4); descartado, não gera token |
+| COMENTÁRIO | `glosa\(([^)]*)\)` ou `\|>.*?<\|` (bloco, DOTALL não-guloso) | `glosa(explica o versículo)`, `\|> anota <\|` | Comentário de linha/bloco; descartado, não gera token; `\|>` sem `<\|` ⇒ erro léxico |
 | ERRO_LEXICO | qualquer cadeia de Σ* não reconhecida pelas regras acima | `#`, `@`, `12.`, `"texto não fechado` | Símbolo ou lexema inválido; gera mensagem de erro (ver 2.6) |
 
 ## 2.3 Classes de Palavras da Linguagem
@@ -178,7 +178,7 @@ Toda cadeia de entrada é, portanto, um elemento de Σ*, e cada categoria de tok
 
 Espaços (` `), tabulações (`\t`) e quebras de linha (`\n` ou `\r\n`) pertencem à linguagem regular `[ \t\r\n]+`, mas **não geram token**: são consumidos e descartados pelo analisador léxico entre o reconhecimento de dois lexemas. A quebra de linha, entretanto, incrementa um contador interno de linha, usado para localizar erros léxicos e sintáticos.
 
-O vocabulário original da linguagem não define uma sintaxe de comentários. Como o item é opcional, propõe-se, para fins de formalização, a seguinte convenção (a ser adotada ou não pelo grupo): comentários de linha única delimitados pela palavra-chave `glosa` seguida de conteúdo entre parênteses — `glosa(comentário)` — reconhecidos pela expressão regular `glosa\([^)]*\)` e descartados, sem gerar token, de forma análoga aos espaços em branco.
+O vocabulário original da linguagem não define uma sintaxe de comentários. Como o item é opcional, propõe-se, para fins de formalização, duas convenções equivalentes, ambas descartadas sem gerar token, de forma análoga aos espaços em branco: (1) comentários delimitados pela palavra-chave `glosa` seguida de conteúdo entre parênteses — `glosa(comentário)` — reconhecidos por `glosa\([^)]*\)`, sem aninhamento; (2) comentários de bloco delimitados por `|>` (abertura) e `<|` (fechamento) — `|> comentário <|` — reconhecidos por `\|>.*?<\|` (DOTALL, não-guloso, primeira ocorrência de `<|` fecha), sem aninhamento em V1, podendo conter quebras de linha (contador de linha/coluna atualizado). `|>` sem `<|` de fechamento ⇒ erro léxico com panic-mode. `glosa` só inicia comentário se seguida imediatamente de `(`; caso contrário vale maximal munch como identificador.
 
 ## 2.5 Estratégia de Maior Casamento (Longest Match)
 

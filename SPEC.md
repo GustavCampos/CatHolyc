@@ -43,12 +43,15 @@ SPEC.md
 ## 4 Lexer
 - API: `tokenize(source: str) -> tuple[list[Token], list[LexError]]`
 - Handle `\r\n`, `\n`; track `line`, `col`
-- Skip: `[ \t]+`, newlines count only, `glosa(...)` comments
+- Skip: `[ \t]+`, newlines count only, `glosa(...)` + `|> ... <|` comments (both discarded, newlines inside count)
 - Word chars: `[A-Za-zÀ-Úà-ú0-9_]`
 - Longest match mandatory:
   - Consume maximal word run, then reserved lookup
   - Resolves `amém` vs `amém_senhor`, `doutra_sorte` vs `doutra_sorte_caso`
 - Priority per position:
+  0. comments (discarded, no token; newlines inside update `line`/`col`):
+     - `glosa\([^)]*\)` ⇒ skip to `)`; V1 no nesting, single-line use
+     - `\|>.*?<\|` (DOTALL, non-greedy) ⇒ block skip to first `<|`; V1 no nesting; unterminated `|>` ⇒ lex error, panic-mode resume after `|>`
   1. string `"([^"\n\\]|\\.)*"` ⇒ `TEXT_LITERAL`; unterminated ⇒ error
   2. number `[0-9]+\.[0-9]+` ⇒ `NUMBER_REAL`, else `[0-9]+` ⇒ `NUMBER_INT`; `12.` ⇒ error
   3. word run ⇒ reserved lookup ⇒ else `IDENTIFIER`
