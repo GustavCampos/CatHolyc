@@ -1,0 +1,8 @@
+# em_nome_do_pai
+MAIORIDADE = 18
+idade = 21
+estudante = True
+if idade > MAIORIDADE and estudante == True:
+    print("É maior de idade e estudante.")
+else:
+    print("A condição não foi satisfeita.")

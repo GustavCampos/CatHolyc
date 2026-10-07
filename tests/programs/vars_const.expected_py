@@ -1,0 +1,11 @@
+# em_nome_do_pai
+MAIORIDADE = 18
+idade = 21
+altura = 1.75
+nome = "Maria"
+estudante = True
+print(idade)
+print(altura)
+print(nome)
+print(estudante)
+print(MAIORIDADE)
