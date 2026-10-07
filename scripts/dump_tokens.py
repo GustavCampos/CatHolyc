@@ -14,14 +14,14 @@ def main() -> int:
     try:
         src = path.read_text(encoding="utf-8")
     except OSError as e:
-        print(f"erro IO: {e}", file=sys.stderr)
+        print(f"Erro de IO: {e}", file=sys.stderr)
         return 2
     tokens, errors = tokenize(src)
     for t in tokens:
         print(f"{t.linha}:{t.coluna} {t.tipo.name} {t.lexema!r}")
     for e in errors:
         print(str(e), file=sys.stderr)
-    return 0
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":

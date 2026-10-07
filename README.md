@@ -473,3 +473,146 @@ Exemplos:
 - Entrada com parêntese não fechado `($idade somado_a 1`: `Erro sintático: linha 4 — token encontrado 'amém', esperado ')'`.
 
 O `<elemento esperado>` deve ser preenchido com o terminal (ou conjunto FIRST do não terminal, quando a produção tiver alternativas) previsto pela gramática no ponto da falha — informação que a própria função `parseX()` já possui, pois é ela quem decide qual `consome(...)` chamar.
+
+---
+
+# 5. Análise Semântica
+
+Implementação: `semantic/symbols.py` (`Symbol`, `SymbolTable`) + `semantic/analyzer.py` (`Analyzer`, `analyze(prog)`). Roda sobre a AST já construída, antes do codegen. Falha rápida no primeiro erro (`SemanticError`).
+
+## 5.1 Tabela de símbolos — escopos em pilha
+
+- `Symbol { nome, tipo, const, linha }`, com `tipo` canônico: `capítulo | versículo | salmo | dogma` (literais `int/float/texto/bool` normalizados na entrada).
+- `SymbolTable.scopes`: lista de dicts; `scopes[0]` = corpo do programa (escopo global, `push()` na entrada de `analyze`).
+- Cada bloco empilha um escopo novo (`_bloco`): ramos `entao` / cada `senaoSe` / `senao` do `Se`, corpo do `Enquanto`, corpo do `Para`, corpo do `ParaCada` (que declara a variável de iteração como `salmo`).
+- `Para`: `init` e `incremento` são avaliados no escopo envolvente (são `Atribuicao` a variável já declarada); só o corpo empilha escopo.
+- `declare` só insere no escopo corrente (sombreamento entre escopos permitido); `lookup` percorre a pilha de dentro para fora.
+
+## 5.2 Regras verificadas (mensagens com prefixo `ESEM`)
+
+| # | Regra | Mensagem |
+|---|---|---|
+| 1 | `mandamento` exige inicialização | `ESEM const sem inicialização: '<nome>'` |
+| 2 | Sem redeclaração no mesmo escopo | `ESEM redeclaração de '<nome>'` |
+| 3 | Uso exige declaração prévia (variável ou expressão) | `ESEM identificador desconhecido '<nome>'` |
+| 4 | Atribuição a `mandamento` proibida | `ESEM atribuição a constante '<nome>'` |
+| 5 | Atribuição compatível: igualdade estrita, exceto `int→float` (promoção) | `ESEM tipos incompatíveis: não é possível atribuir <src> a <dest> ('<nome>')` |
+| 6 | Condição de `caso / enquanto / peregrine` (e cada `doutra_sorte_caso`) deve ser `dogma` | `ESEM condição deve ser do tipo dogma, encontrado <t>` |
+| 7 | Aritmética (`somado_a, privado_de, multiplicado_por, partilhado_entre`, menos unário) só sobre numéricos (`capítulo/versículo`); `salmo` nunca | `ESEM operação aritmética '<op>' exige operandos numéricos ...` |
+| 8 | `dízimo_de` exige `capítulo × capítulo` | `ESEM 'dízimo_de' exige operandos do tipo capítulo (int) ...` |
+| 9 | Relacionais `exaltado_sobre/submisso_a/não_abaixo_de/não_acima_de` só sobre numéricos | `ESEM operador relacional '<op>' exige operandos numéricos ...` |
+| 10 | `conforme_a/dissonante_de`: numérico×numérico (com promoção) ou mesmo tipo (inclui `salmo`, `dogma`); senão erro | `ESEM operador '<op>' exige operandos de mesmo tipo ...` |
+| 11 | Lógicos (`em_comunhão_com, ou_porventura, não_seja`) exigem `dogma` | `ESEM operador lógico '<op>' exige operandos do tipo dogma ...` |
+| 12 | `proclame`: qualquer tipo (`ExpressaoOu` única) | — (só valida a expressão) |
+| 13 | `confesse`: alvo deve ser `preceito` declarado, não `const` | `ESEM identificador desconhecido` / `ESEM atribuição a constante` |
+| 14 | `em_cada` V1: coleção deve ser `salmo`; variável de iteração declarada `salmo` no escopo do laço | `ESEM em_cada suporta apenas salmo em V1, encontrado <t>` |
+
+## 5.3 Inferência de tipos (`_tipo`)
+
+- Literal ⇒ próprio tipo; `Identificador` ⇒ tipo da tabela; `não_seja` ⇒ `dogma`; menos unário ⇒ tipo do operando.
+- Binária aritmética ⇒ `versículo` se algum lado é `versículo`, senão `capítulo`; `dízimo_de` ⇒ `capítulo`; relacionais e lógicos ⇒ `dogma`.
+
+## 5.4 Formato de erro
+
+```
+Erro semântico: linha <N> — <msg>
+```
+
+Fail-fast: primeiro erro aborta (diferente do léxico, que acumula em panic-mode). CLI converte em saída 1, stderr.
+
+---
+
+# 6. Geração de Código Python
+
+Implementação: `codegen/py_generator.py`, API `generate(programa) -> str`. Indentação 4 espaços, pilha de indentação; `amém_senhor` só desempilha, não emite nada. Cabeçalho `# em_nome_do_pai`; `amém` = quebra de linha.
+
+## 6.1 Mapeamento Holy → Python
+
+| Holy | Python |
+|---|---|
+| `capítulo / versículo / salmo / dogma` | `int / float / str / bool` (declarações viram atribuição simples) |
+| `mandamento $X seja E` | `X_UPPER = E` (convenção UPPER; distinção const apagada — fiscalização foi semântica) |
+| `preceito $x [seja E]` | `x = E`, ou zero padrão se sem init: `0 / 0.0 / "" / False` |
+| `$x seja E` (atribuição) | `x = E` (`$` removido no parser, AST guarda nome puro) |
+| `somado_a / privado_de / multiplicado_por / dízimo_de` | `+ - * %` |
+| `partilhado_entre` | `//` se ambos operandos `capítulo` (estático), senão `/` |
+| `exaltado_sobre / submisso_a / não_abaixo_de / não_acima_de / conforme_a / dissonante_de` | `> < >= <= == !=` |
+| `em_comunhão_com / ou_porventura / não_seja` | `and / or / not` (parênteses mínimos por precedência) |
+| `verdade / falsidade` | `True / False` |
+| `privado_de Fator` (menos unário) | `-Fator` |
+| `caso / doutra_sorte_caso / doutra_sorte` | `if / elif / else:` + indentação |
+| `enquanto C` | `while C:` + indentação |
+| `peregrine Init Cond amém Incr` | desaçucara para `while`: emite `init`, depois `while cond:` + corpo + `incremento` ao fim do laço |
+| `em_cada $v $col` | `for v in col:` nativo |
+| `proclame E` | `print(E)` |
+| `confesse $x` | `int(input()) / float(input()) / input() / teste de pertinência dogma` conforme tipo declarado |
+| `em_nome_do_pai / assim_seja_em_seu_nome_amem` | comentário de cabeçalho + script top-level (sem wrapper `__main__`) |
+| Bloco vazio | `pass` |
+
+## 6.2 Decisões V1 (fixas, documentadas)
+
+1. **Divisão inteira:** Python `/` sempre retorna float, então `capítulo partilhado_entre capítulo` emite `//`. Ressalva: `//` arredonda para baixo, C trunca — diverge só com operandos negativos; E2E evita esse caso. CLI `--strict` transforma o uso em erro.
+2. **Constante apagada:** `mandamento` vira atribuição UPPER_CASE; reatribuição já barrada na semântica.
+3. **Sombreamento:** gerador mantém env de escopos espelhando o analisador; nome sombreado ou colisão de UPPER ganha sufixo `__N` (Python não tem escopo de bloco).
+4. **Sem init:** `preceito` sem `seja` recebe zero padrão (Python exige vínculo); `--strict` transforma em erro.
+5. **`confesse dogma`:** `input().strip().lower() in ("verdade", "true", "1", "sim")`.
+6. **Rastreabilidade:** `generate(prog, include_line_comments=True)` anexa ` # linha N`; CLI não ativa por padrão (saída limpa = golden).
+
+## 6.3 Exemplo (saída real do gerador)
+
+Fonte `tests/programs/exemplo_readme.holy` ⇒:
+
+```python
+# em_nome_do_pai
+MAIORIDADE = 18
+idade = 21
+estudante = True
+if idade > MAIORIDADE and estudante == True:
+    print("É maior de idade e estudante.")
+else:
+    print("A condição não foi satisfeita.")
+```
+
+Stdout ao executar: `É maior de idade e estudante.`
+
+---
+
+# 7. Testes, CLI e Erros Unificados
+
+## 7.1 Matriz (98 testes, `python -m pytest -q`)
+
+| Camada | Arquivo | Qtd | O que cobre |
+|---|---|---|---|
+| Léxico | `tests/lexer/test_lexer.py` | 24 | lista reservada completa, `$`-identificador vs. palavra sem `$` (erro), `$caso` = identificador, `$` sozinho, maior casamento (`amém/amém_senhor`, `doutra_sorte/_caso`), números (`12.` erro), strings + escapes + não-fechada, `# @` erros, linha/coluna, exemplo README zero erros |
+| Parser | `tests/parser/test_parser.py` | 10 | exemplo README forma `Se` esperada (condição `em_comunhão_com` na raiz), cada comando, precedência `2 somado_a 3 multiplicado_por 4`, parênteses, cadeia `doutra_sorte_caso`, erro `amém` ausente |
+| Semântica | `tests/semantic/test_semantic.py` | 15 | 8+ negativos (redeclaração, uso não declarado, reatribuir const, `int→salmo`, condição não-dogma, lógica sobre int, `dízimo_de` com float, `em_cada` sobre não-salmo) + exemplo válido passa |
+| Codegen | `tests/codegen/test_py_generator.py` | 19 | mapeamento §6 por operador/comando, `//` vs `/`, `peregrine→while`, `em_cada→for`, `confesse` casts, zero padrão, UPPER const |
+| E2E | `tests/e2e/test_e2e.py` | 10 | 5 programas × (py == golden + stdout == golden) |
+| CLI | `tests/cli/test_cli.py` | 20 | 5 programas × (`--emit-py-only` == golden, `--run` stdout == golden) + sidecar padrão, `-o`, `--dump-tokens`, `--dump-ast`, erros léxico/sintático/semântico ⇒ 1, arquivo ausente ⇒ 2, `--strict` rejeita sem-init e passa nos goldens |
+
+## 7.2 Programas E2E (`tests/programs/`)
+
+`hello`, `vars_const`, `caso`, `enquanto_countdown`, `peregrine_sum` — cada um com trio `.holy + .expected_py + .expected_stdout`. `exemplo_readme.holy` (idêntico em AST a `caso.holy` a menos de espaços) é o fixture canônico consumido nos testes de léxico/parser/semântica como "exemplo do README passa nas 3 fases".
+
+## 7.3 CLI
+
+```
+python cli.py program.holy [-o out.py] [--dump-tokens] [--dump-ast] [--emit-py-only] [--run] [--strict]
+```
+
+- Sem `-o` e sem `--emit-py-only` ⇒ sidecar `program.holy → program.py`.
+- `--emit-py-only` ⇒ imprime Python no stdout, não grava (combina com `--run`).
+- `--run` ⇒ grava temp `.py`, executa com o interpretador corrente, repassa stdout; `confesse` funciona via stdin herdado.
+- `--dump-tokens` ⇒ linhas `linha:col TIPO 'lexema'`, continua pipeline. `--dump-ast` ⇒ JSON da AST, continua.
+- `scripts/dump_tokens.py`, `scripts/dump_ast.py` = atalhos standalone (mesmo formato; `dump_tokens` retorna 1 se houver erro léxico).
+- Códigos: `0` sucesso, `1` erro léxico/sintático/semântico (ou `--strict`/runtime), `2` IO/uso. Tudo em português no stderr.
+
+## 7.4 Erros unificados (SPEC §10)
+
+```
+Erro léxico: símbolo ou lexema inválido '<lex>' na linha <N>, coluna <C>
+Erro sintático: linha <N> — encontrado '<lex>' (<cat>), esperado '<exp>'
+Erro semântico: linha <N> — <msg>
+```
+
+Léxico acumula (panic-mode, resume próximo char); parser e semântica fail-fast no primeiro erro.

@@ -33,7 +33,7 @@ def main() -> int:
     try:
         src = path.read_text(encoding="utf-8")
     except OSError as e:
-        print(f"erro IO: {e}", file=sys.stderr)
+        print(f"Erro de IO: {e}", file=sys.stderr)
         return 2
     tokens, lex_errs = tokenize(src)
     for e in lex_errs:
