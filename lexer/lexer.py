@@ -191,6 +191,11 @@ def tokenize(source: str) -> tuple[list[Token], list[LexError]]:
             i += 1
             coluna += 1
             continue
+        if c == ",":
+            tokens.append(Token(TokenType.COMMA, c, linha, coluna))
+            i += 1
+            coluna += 1
+            continue
 
         # 5. invalid
         errors.append(LexError(c, linha, coluna))

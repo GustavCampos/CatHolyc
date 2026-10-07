@@ -72,6 +72,9 @@ def collect_warnings(prog: A.Programa) -> list[str]:
             return _LITERAL_MAP.get(expr.tipo, expr.tipo)
         if isinstance(expr, A.Identificador):
             return lookup(expr.nome)
+        if isinstance(expr, A.Chamada):
+            e = lookup(expr.nome)
+            return e["tipo"] if isinstance(e, dict) else e
         if isinstance(expr, A.OperacaoUnaria):
             if expr.operador == "não_seja":
                 return DOG
@@ -111,6 +114,9 @@ def collect_warnings(prog: A.Programa) -> list[str]:
     def walk_expr(o) -> None:
         if isinstance(o, (A.OperacaoBinaria, A.OperacaoUnaria)):
             check_expr(o)  # checks node, then recurses into children itself
+        elif isinstance(o, A.Chamada):
+            for a in o.args:
+                walk_expr(a)
         elif isinstance(o, (list, tuple)):
             for x in o:
                 walk_expr(x)
@@ -164,7 +170,17 @@ def collect_warnings(prog: A.Programa) -> list[str]:
                 scopes.pop()
             elif isinstance(cmd, A.Saida):
                 walk_expr(cmd.expressao)
-            # Entrada has no expression to walk
+            elif isinstance(cmd, A.DefFuncao):
+                scopes[-1][cmd.nome] = {"tipo": _LITERAL_MAP.get(cmd.tipo, cmd.tipo)}
+                scopes.append({})
+                for p in cmd.params:
+                    scopes[-1][p.nome] = {"tipo": _LITERAL_MAP.get(p.tipo, p.tipo)}
+                walk_cmds(cmd.corpo)
+                scopes.pop()
+            elif isinstance(cmd, A.Retorne):
+                if cmd.valor is not None:
+                    walk_expr(cmd.valor)
+            # Cessai/Perseverai/Entrada have no expression to walk
 
     walk_cmds(prog.comandos)
     return warnings

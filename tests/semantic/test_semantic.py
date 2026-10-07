@@ -132,3 +132,89 @@ def test_em_cada_apenas_salmo():
 
 def test_em_cada_salmo_ok():
     check(P('preceito salmo $t seja "oi" amém em_cada $c $t proclame $c amém amém_senhor'))
+
+
+def test_cessai_perseverai_no_laco_ok():
+    check(P("enquanto verdade cessai amém perseverai amém amém_senhor"))
+
+
+def test_cessai_fora_de_laco():
+    check_fails(P("cessai amém"), "fora de laço")
+    check_fails(P("perseverai amém"), "fora de laço")
+
+
+def test_cessai_em_funcao_sem_laco():
+    check_fails(
+        P("oficio capítulo $f capítulo $x cessai amém retorne $x amém amém_senhor"),
+        "fora de laço",
+    )
+
+
+def test_def_call_ok():
+    check(
+        P(
+            "oficio capítulo $soma capítulo $a capítulo $b "
+            "retorne $a somado_a $b amém amém_senhor "
+            "preceito capítulo $r seja $soma(2, 3) amém"
+        )
+    )
+
+
+def test_def_aninhada_e_recursao_ok():
+    check(
+        P(
+            "oficio capítulo $f capítulo $n "
+            "oficio capítulo $g capítulo $m retorne $m amém amém_senhor "
+            "retorne $g($n) amém amém_senhor"
+        )
+    )
+
+
+def test_retorne_nu_ok():
+    check(P("oficio salmo $f salmo $s retorne amém amém_senhor"))
+
+
+def test_retorne_fora_de_oficio():
+    check_fails(P("retorne 1 amém"), "fora de oficio")
+
+
+def test_retorne_tipo_incompativel():
+    check_fails(
+        P("oficio salmo $f capítulo $x retorne $x amém amém_senhor"),
+        "retornar capítulo como salmo",
+    )
+
+
+def test_chamada_aridade():
+    check_fails(
+        P(
+            "oficio capítulo $f capítulo $x retorne $x amém amém_senhor "
+            "proclame $f(1, 2) amém"
+        ),
+        "espera 1",
+    )
+
+
+def test_chamada_alvo_nao_oficio():
+    check_fails(P("proclame $g(1) amém"), "desconhecido")
+    check_fails(
+        P("preceito capítulo $v seja 1 amém proclame $v(1) amém"),
+        "não é oficio",
+    )
+
+
+def test_atribuicao_a_oficio():
+    check_fails(
+        P("oficio capítulo $f capítulo $x retorne $x amém amém_senhor $f seja 1 amém"),
+        "oficio",
+    )
+
+
+def test_escrita_em_variavel_externa():
+    check_fails(
+        P(
+            "preceito capítulo $x seja 1 amém "
+            "oficio capítulo $f capítulo $a $x seja $a amém retorne $a amém amém_senhor"
+        ),
+        "externo",
+    )

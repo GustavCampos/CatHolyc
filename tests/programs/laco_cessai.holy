@@ -1,0 +1,13 @@
+em_nome_do_pai
+preceito capítulo $c seja 0 amém
+enquanto $c não_acima_de 5
+    $c seja $c somado_a 1 amém
+    caso $c conforme_a 2
+        perseverai amém
+    amém_senhor
+    caso $c exaltado_sobre 4
+        cessai amém
+    amém_senhor
+    proclame $c amém
+amém_senhor
+assim_seja_em_seu_nome_amem

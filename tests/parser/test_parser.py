@@ -121,3 +121,45 @@ def test_missing_amem_senhor_error():
     assert errs == []
     with pytest.raises(ParserError):
         parse(toks)
+
+
+def test_cessai_perseverai():
+    prog = parse_src(
+        "em_nome_do_pai enquanto verdade cessai amém perseverai amém amém_senhor "
+        "assim_seja_em_seu_nome_amem"
+    )
+    corpo = prog.comandos[0].corpo
+    assert isinstance(corpo[0], A.Cessai)
+    assert isinstance(corpo[1], A.Perseverai)
+
+
+def test_def_funcao():
+    prog = parse_src(
+        "em_nome_do_pai oficio capítulo $soma capítulo $a capítulo $b "
+        "retorne $a somado_a $b amém amém_senhor assim_seja_em_seu_nome_amem"
+    )
+    f = prog.comandos[0]
+    assert isinstance(f, A.DefFuncao)
+    assert (f.tipo, f.nome) == ("capítulo", "soma")
+    assert [(p.tipo, p.nome) for p in f.params] == [("capítulo", "a"), ("capítulo", "b")]
+    assert isinstance(f.corpo[0], A.Retorne)
+
+
+def test_retorne_nu_e_chamada():
+    prog = parse_src(
+        "em_nome_do_pai oficio salmo $f salmo $s retorne amém amém_senhor "
+        'preceito salmo $r seja $f("oi") amém assim_seja_em_seu_nome_amem'
+    )
+    assert prog.comandos[0].corpo[0].valor is None
+    chamada = prog.comandos[1].valor
+    assert isinstance(chamada, A.Chamada)
+    assert chamada.nome == "f" and len(chamada.args) == 1
+
+
+def test_def_missing_amem_senhor_error():
+    toks, errs = tokenize(
+        "em_nome_do_pai oficio capítulo $f capítulo $x retorne $x amém assim_seja_em_seu_nome_amem"
+    )
+    assert errs == []
+    with pytest.raises(ParserError):
+        parse(toks)

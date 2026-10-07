@@ -6,7 +6,7 @@ import pytest
 
 CLI = Path(__file__).resolve().parents[2] / "cli.py"
 PROGRAMS_DIR = Path(__file__).resolve().parents[1] / "programs"
-GOLDENS = ["hello", "vars_const", "caso", "enquanto_countdown", "peregrine_sum"]
+GOLDENS = ["hello", "vars_const", "caso", "enquanto_countdown", "peregrine_sum", "laco_cessai", "funcao_soma"]
 
 
 def run_cli(*argv: str, cwd: Path | None = None):

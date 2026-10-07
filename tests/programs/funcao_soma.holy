@@ -1,0 +1,16 @@
+em_nome_do_pai
+oficio capítulo $soma capítulo $a capítulo $b
+    retorne $a somado_a $b amém
+amém_senhor
+oficio capítulo $fatorial capítulo $n
+    preceito capítulo $r seja 1 amém
+    preceito capítulo $i seja 1 amém
+    enquanto $i não_acima_de $n
+        $r seja $r multiplicado_por $i amém
+        $i seja $i somado_a 1 amém
+    amém_senhor
+    retorne $r amém
+amém_senhor
+proclame $soma(2, 3) amém
+proclame $fatorial(5) amém
+assim_seja_em_seu_nome_amem

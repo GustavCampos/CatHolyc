@@ -35,6 +35,10 @@ class TokenType(Enum):
     ENQUANTO = auto()
     PEREGRINE = auto()
     EM_CADA = auto()
+    CESSAI = auto()
+    PERSEVERAI = auto()
+    OFICIO = auto()
+    RETORNE = auto()
     PROCLAME = auto()
     CONFESSE = auto()
     # boolean literals
@@ -52,6 +56,7 @@ class TokenType(Enum):
     TEXT_LITERAL = auto()
     LPAREN = auto()
     RPAREN = auto()
+    COMMA = auto()
     EOF = auto()
 
 
@@ -83,6 +88,10 @@ RESERVED_MAP: dict[str, TokenType] = {
     "enquanto": TokenType.ENQUANTO,
     "peregrine": TokenType.PEREGRINE,
     "em_cada": TokenType.EM_CADA,
+    "cessai": TokenType.CESSAI,
+    "perseverai": TokenType.PERSEVERAI,
+    "oficio": TokenType.OFICIO,
+    "retorne": TokenType.RETORNE,
     "proclame": TokenType.PROCLAME,
     "confesse": TokenType.CONFESSE,
     "verdade": TokenType.VERDADE,

@@ -21,6 +21,10 @@ lexer/      parser/     semantic/     codegen/        cli.py
 | `ComandoEnquanto` | `parseEnquanto` | `Enquanto { condicao, corpo }` |
 | `ComandoPara ::= peregrine Atr Expr amém Atr Bloco amém_senhor` | `parsePara` | `Para { init, condicao, incremento, corpo }` |
 | `ComandoParaCada ::= em_cada IDENT IDENT Bloco amém_senhor` | `parseParaCada` | `ParaCada { variavel, colecao, corpo }` |
+| `Cessai ::= cessai amém` | `parseCessai` | `Cessai { }` |
+| `Perseverai ::= perseverai amém` | `parsePerseverai` | `Perseverai { }` |
+| `DefFuncao ::= oficio Tipo IDENT {Tipo IDENT} Bloco amém_senhor` | `parseDefFuncao` | `DefFuncao { tipo, nome, params: [Param], corpo }` |
+| `Retorne ::= retorne [ExpressaoOu] amém` | `parseRetorne` | `Retorne { valor? }` |
 | `ComandoSaida` | `parseSaida` | `Saida { expressao }` |
 | `ComandoEntrada` | `parseEntrada` | `Entrada { variavel }` |
 | `ExpressaoOu ::= ExpressaoE {ou_porventura ...}` | `parseExpressaoOu` | `OperacaoBinaria { ou_porventura }` ou repasse |
@@ -30,6 +34,7 @@ lexer/      parser/     semantic/     codegen/        cli.py
 | `ExpressaoAdd` | `parseExpressaoAdd` | `OperacaoBinaria { somado_a/privado_de }` |
 | `ExpressaoMul` | `parseExpressaoMul` | `OperacaoBinaria { multiplicado_por/partilhado_entre/dízimo_de }` |
 | `Fator ::= IDENT` | `parseFator` | `Identificador { nome }` |
+| `Fator ::= Chamada` (`IDENT ( args )`, `,`-separados, `$` mantido) | `parseFator` (lookahead `IDENT+LPAREN`) | `Chamada { nome, args }` |
 | `Fator ::= NUM_INT/NUM_REAL/TEXTO/verdade/falsidade` | `parseFator` | `Literal { tipo, valor }` |
 | `Fator ::= ( ExpressaoOu )` | `parseFator` | transparente — retorna `ExpressaoOu` interno |
 | `Fator ::= privado_de Fator` | `parseFator` | `OperacaoUnaria { privado_de }` |
@@ -89,12 +94,14 @@ input()/teste-dogma`. `preceito` sem init = zero padrão (`--strict` acusa).
 ## 7. Provas vivas (rode na defesa)
 
 ```
-python -m pytest -q                                   # 98 passed
+python -m pytest -q                                   # 128 passed
 python cli.py tests/programs/exemplo_readme.holy --dump-tokens | head -8
 python cli.py tests/programs/exemplo_readme.holy --dump-ast | head -20
 python cli.py tests/programs/caso.holy --emit-py-only
 python cli.py tests/programs/caso.holy --run
 python cli.py tests/programs/caso.holy --emit-py-only --strict   # sai 0
+python cli.py tests/programs/funcao_soma.holy --emit-py-only --run
+python cli.py tests/programs/laco_cessai.holy --run -o /tmp/laco.py
 echo 'em_nome_do_pai
 preceito capítulo $x amém
 proclame $x amém
@@ -111,6 +118,14 @@ assim_seja_em_seu_nome_amem' | python cli.py /dev/stdin --emit-py-only --strict 
 - *Por que `$` obrigatório?* Palavra sem `$` nunca é identificador — vira
   erro léxico; elimina ambiguidade reservada × variável.
 - *Parênteses na AST?* Não há nó; só guiam parsing.
+- *`cessai` fora de laço?* Erro semântico por contador de profundidade; `oficio`
+  aninhado zera a base (não herda laço externo). Vale em `em_cada` também.
+- *Por que `,` virou token?* Chamadas `$f(a, b)` precisam de separador; `,`
+  já estava em Σ mas gerava erro léxico — agora emite `COMMA`.
+- *Escrita em variável externa dentro de `oficio`?* Barrada (só leitura):
+  Python criaria local silencioso, divergindo da semântica Holy.
+- *`retorne` sem valor?* Permitido (saída antecipada → `return` nu);
+  com valor, tipo deve casar com o declarado (`int→float` promove).
 - *Abertos (open decisions)?* `peregrine` header C-style reaproveitando
   `Atribuicao+amém`; `em_cada` restrito a `salmo`; `versículo=float`;
   comentário `glosa(...)/|> <|`; divisão `//` documentada.

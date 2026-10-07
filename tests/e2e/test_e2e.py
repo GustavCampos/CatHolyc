@@ -11,7 +11,7 @@ from lexer.lexer import tokenize
 from parser.parser import parse
 from semantic.analyzer import analyze
 
-PROGRAMS = ["hello", "vars_const", "caso", "enquanto_countdown", "peregrine_sum"]
+PROGRAMS = ["hello", "vars_const", "caso", "enquanto_countdown", "peregrine_sum", "laco_cessai", "funcao_soma"]
 BASE = Path(__file__).resolve().parents[1] / "programs"
 
 

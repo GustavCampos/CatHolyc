@@ -37,6 +37,9 @@ def _compativel(dest: str, src: str) -> bool:
 class Analyzer:
     def __init__(self) -> None:
         self.tabela = SymbolTable()
+        self.loop_depth = 0  # laços envolventes (enquanto/peregrine/em_cada)
+        self.func_stack: list[dict] = []  # {ret, base_loop, base_scope}
+        self.func_sigs: dict[int, dict] = {}  # id(Symbol) -> {params, ret}
 
     def analyze(self, prog: A.Programa) -> SymbolTable:
         self.tabela.push()  # global scope = program body
@@ -59,7 +62,7 @@ class Analyzer:
             t = self._tipo(node.condicao)
             if t != DOG:
                 raise _err(node.linha, f"ESEM condição deve ser do tipo dogma, encontrado {t}")
-            self._bloco(node.corpo)
+            self._laco(node.corpo)
         elif isinstance(node, A.Para):
             # init/incremento referem-se a variável já declarada (Atribuicao)
             self._atrib(node.init.nome, node.init.valor, node.init.linha)
@@ -67,7 +70,17 @@ class Analyzer:
             if t != DOG:
                 raise _err(node.linha, f"ESEM condição deve ser do tipo dogma, encontrado {t}")
             self._atrib(node.incremento.nome, node.incremento.valor, node.incremento.linha)
-            self._bloco(node.corpo)
+            self._laco(node.corpo)
+        elif isinstance(node, A.Cessai):
+            if not self._em_laco():
+                raise _err(node.linha, "ESEM 'cessai' fora de laço (enquanto/peregrine/em_cada)")
+        elif isinstance(node, A.Perseverai):
+            if not self._em_laco():
+                raise _err(node.linha, "ESEM 'perseverai' fora de laço (enquanto/peregrine/em_cada)")
+        elif isinstance(node, A.DefFuncao):
+            self._def_funcao(node)
+        elif isinstance(node, A.Retorne):
+            self._retorne(node)
         elif isinstance(node, A.ParaCada):
             col = self.tabela.lookup(node.colecao)
             if col is None:
@@ -82,10 +95,12 @@ class Analyzer:
                 self.tabela.declare(Symbol(node.variavel, SAL, False, node.linha))
             except ValueError:
                 raise _err(node.linha, f"ESEM redeclaração de '{node.variavel}'")
+            self.loop_depth += 1
             try:
                 for c in node.corpo:
                     self._cmd(c)
             finally:
+                self.loop_depth -= 1
                 self.tabela.pop()
         elif isinstance(node, A.Saida):
             self._tipo(node.expressao)  # qualquer tipo
@@ -95,6 +110,7 @@ class Analyzer:
                 raise _err(node.linha, f"ESEM identificador desconhecido '{node.variavel}'")
             if sym.const:
                 raise _err(node.linha, f"ESEM atribuição a constante '{node.variavel}'")
+            self._check_externa(node.variavel, node.linha)
         else:
             raise _err(getattr(node, "linha", 0), f"ESEM nó desconhecido {type(node).__name__}")
 
@@ -105,6 +121,66 @@ class Analyzer:
                 self._cmd(c)
         finally:
             self.tabela.pop()
+
+    def _laco(self, corpo: list) -> None:
+        self.loop_depth += 1
+        try:
+            self._bloco(corpo)
+        finally:
+            self.loop_depth -= 1
+
+    def _em_laco(self) -> bool:
+        base = self.func_stack[-1]["base_loop"] if self.func_stack else 0
+        return self.loop_depth > base
+
+    def _def_funcao(self, node: A.DefFuncao) -> None:
+        if node.nome in self.tabela.current():
+            raise _err(node.linha, f"ESEM redeclaração de '{node.nome}'")
+        ret = _norm_tipo(node.tipo)
+        sym = Symbol(node.nome, ret, True, node.linha)
+        self.tabela.declare(sym)  # const: nome de oficio não aceita atribuição
+        self.func_sigs[id(sym)] = {
+            "params": [_norm_tipo(p.tipo) for p in node.params],
+            "ret": ret,
+        }
+        base_scope = len(self.tabela.scopes)
+        self.func_stack.append(
+            {"ret": ret, "base_loop": self.loop_depth, "base_scope": base_scope}
+        )
+        self.tabela.push()
+        try:
+            for p in node.params:
+                if p.nome in self.tabela.current():
+                    raise _err(p.linha, f"ESEM redeclaração de '{p.nome}'")
+                self.tabela.declare(Symbol(p.nome, _norm_tipo(p.tipo), False, p.linha))
+            for c in node.corpo:
+                self._cmd(c)
+        finally:
+            self.tabela.pop()
+            self.func_stack.pop()
+
+    def _retorne(self, node: A.Retorne) -> None:
+        if not self.func_stack:
+            raise _err(node.linha, "ESEM 'retorne' fora de oficio")
+        if node.valor is None:
+            return  # retorno nu: saída antecipada, sem valor
+        dest = self.func_stack[-1]["ret"]
+        src = self._tipo(node.valor)
+        if not _compativel(dest, src):
+            raise _err(
+                node.linha,
+                f"ESEM tipos incompatíveis: não é possível retornar {src} como {dest}",
+            )
+
+    def _check_externa(self, nome: str, linha: int) -> None:
+        if self.func_stack:
+            d = self.tabela.depth_of(nome)
+            if d is not None and d < self.func_stack[-1]["base_scope"]:
+                raise _err(
+                    linha,
+                    f"ESEM '{nome}' pertence a escopo externo a oficio "
+                    f"(V1: dentro de oficio, só leitura de variáveis externas)",
+                )
 
     def _decl_const(self, node: A.DeclConst) -> None:
         if node.nome in self.tabela.current():
@@ -137,8 +213,11 @@ class Analyzer:
         sym = self.tabela.lookup(nome)
         if sym is None:
             raise _err(linha, f"ESEM identificador desconhecido '{nome}'")
-        if sym.const:
+        if sym.const and id(sym) not in self.func_sigs:
             raise _err(linha, f"ESEM atribuição a constante '{nome}'")
+        if id(sym) in self.func_sigs:
+            raise _err(linha, f"ESEM atribuição a oficio '{nome}'")
+        self._check_externa(nome, linha)
         src = self._tipo(valor)
         if not _compativel(sym.tipo, src):
             raise _err(
@@ -169,6 +248,28 @@ class Analyzer:
             if sym is None:
                 raise _err(expr.linha, f"ESEM identificador desconhecido '{expr.nome}'")
             return sym.tipo
+        if isinstance(expr, A.Chamada):
+            sym = self.tabela.lookup(expr.nome)
+            if sym is None:
+                raise _err(expr.linha, f"ESEM identificador desconhecido '{expr.nome}'")
+            sig = self.func_sigs.get(id(sym))
+            if sig is None:
+                raise _err(expr.linha, f"ESEM '{expr.nome}' não é oficio")
+            if len(expr.args) != len(sig["params"]):
+                raise _err(
+                    expr.linha,
+                    f"ESEM oficio '{expr.nome}' espera {len(sig['params'])} "
+                    f"argumento(s), recebido(s) {len(expr.args)}",
+                )
+            for arg, dest in zip(expr.args, sig["params"]):
+                src = self._tipo(arg)
+                if not _compativel(dest, src):
+                    raise _err(
+                        expr.linha,
+                        f"ESEM tipos incompatíveis: não é possível passar {src} "
+                        f"como {dest} em '{expr.nome}'",
+                    )
+            return sig["ret"]
         if isinstance(expr, A.OperacaoUnaria):
             if expr.operador == "não_seja":
                 t = self._tipo(expr.operando)

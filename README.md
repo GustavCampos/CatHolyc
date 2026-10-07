@@ -68,6 +68,8 @@
 | `while` | `enquanto` |
 | `for` | `peregrine` |
 | `for each` | `em_cada` |
+| `break` | `cessai` (só dentro de laço) |
+| `continue` | `perseverai` (só dentro de laço) |
 
 ## 9. Comandos de entrada e saída
 
@@ -91,8 +93,24 @@
 | Fim de comando | `amém` | Finaliza uma instrução |
 | Fim de bloco | `amém_senhor` | Finaliza um bloco |
 | Fim do programa | `assim_seja_em_seu_nome_amem` | Finaliza o programa |
+| Separador de argumentos | `,` | Separa argumentos/parâmetros em chamadas de `oficio` |
 
-## 12. Exemplo
+## 12. Funções (`oficio` / `retorne`)
+
+| C | Linguagem | Função |
+|---|---|---|
+| definição de função | `oficio` | `oficio Tipo $nome [Tipo $param]* Bloco amém_senhor` (aninhável) |
+| `return [E]` | `retorne` | `retorne [ExpressaoOu] amém` (sem valor ⇒ retorno nu) |
+| chamada | `$nome(args)` | `$soma(2, 3)` — chamadas usam prefixo `$`, args separados por `,` |
+
+```text
+oficio capítulo $soma capítulo $a capítulo $b
+    retorne $a somado_a $b amém
+amém_senhor
+preceito capítulo $r seja $soma(2, 3) amém
+```
+
+## 13. Exemplo
 
 ```text
 em_nome_do_pai
@@ -162,7 +180,7 @@ Toda cadeia de entrada é, portanto, um elemento de Σ*, e cada categoria de tok
 
 **a) Palavras reservadas** — conjunto finito e fechado, com prioridade de reconhecimento sobre identificadores:
 
-`capítulo`, `versículo`, `salmo`, `dogma`, `mandamento`, `preceito`, `seja`, `somado_a`, `privado_de`, `multiplicado_por`, `partilhado_entre`, `dízimo_de`, `exaltado_sobre`, `submisso_a`, `não_abaixo_de`, `não_acima_de`, `conforme_a`, `dissonante_de`, `em_comunhão_com`, `ou_porventura`, `não_seja`, `caso`, `doutra_sorte_caso`, `doutra_sorte`, `enquanto`, `peregrine`, `em_cada`, `proclame`, `confesse`, `verdade`, `falsidade`, `em_nome_do_pai`, `amém`, `amém_senhor`, `assim_seja_em_seu_nome_amem`
+`capítulo`, `versículo`, `salmo`, `dogma`, `mandamento`, `preceito`, `seja`, `somado_a`, `privado_de`, `multiplicado_por`, `partilhado_entre`, `dízimo_de`, `exaltado_sobre`, `submisso_a`, `não_abaixo_de`, `não_acima_de`, `conforme_a`, `dissonante_de`, `em_comunhão_com`, `ou_porventura`, `não_seja`, `caso`, `doutra_sorte_caso`, `doutra_sorte`, `enquanto`, `peregrine`, `em_cada`, `cessai`, `perseverai`, `oficio`, `retorne`, `proclame`, `confesse`, `verdade`, `falsidade`, `em_nome_do_pai`, `amém`, `amém_senhor`, `assim_seja_em_seu_nome_amem`
 
 **b) Identificadores** — L_id = { `$` letra (letra | dígito | `_`)* }. Ex.: `$idade`, `$maioridade`, `$estudante`. Prefixo `$` obrigatório (estilo PHP); palavra sem `$` nunca é identificador (gera erro léxico, mesmo que não seja reservada). `$` + palavra reservada (ex. `$caso`) é identificador válido.
 
@@ -174,7 +192,7 @@ Toda cadeia de entrada é, portanto, um elemento de Σ*, e cada categoria de tok
 
 **e) Operadores**: atribuição, aritméticos, relacionais e lógicos, conforme Tabela 2.2 — todos representados por palavras-chave (não por símbolos soltos), o que os torna, sintaticamente, um subconjunto das palavras reservadas.
 
-**f) Delimitadores**: `em_nome_do_pai` (início de programa), `amém` (fim de comando), `amém_senhor` (fim de bloco), `assim_seja_em_seu_nome_amem` (fim de programa). Delimitadores adicionais de agrupamento, como `(` e `)`, podem ser incorporados a Σ_especiais caso o grupo opte por permitir expressões entre parênteses.
+**f) Delimitadores**: `em_nome_do_pai` (início de programa), `amém` (fim de comando), `amém_senhor` (fim de bloco), `assim_seja_em_seu_nome_amem` (fim de programa), `(` `)` (agrupamento e chamadas) e `,` (separador de argumentos de `oficio`).
 
 ## 2.4 Espaços em Branco, Quebras de Linha e Comentários
 
@@ -218,6 +236,7 @@ A sintaxe da linguagem é especificada pela Gramática Livre de Contexto **G = (
 ```
 V = { Programa, Bloco, Comando, DeclConst, DeclVar, Tipo,
       Atribuicao, ComandoSe, ComandoEnquanto, ComandoPara, ComandoParaCada,
+      Cessai, Perseverai, DefFuncao, Retorne, Chamada,
       ComandoSaida, ComandoEntrada,
       ExpressaoOu, ExpressaoE, ExpressaoNao, ExpressaoRel, OpRel,
       ExpressaoAdd, OpAdd, ExpressaoMul, OpMul, Fator }
@@ -230,11 +249,12 @@ T = { em_nome_do_pai, assim_seja_em_seu_nome_amem,
       mandamento, preceito, capítulo, versículo, salmo, dogma,
       seja, amém, amém_senhor,
       caso, doutra_sorte_caso, doutra_sorte, enquanto, peregrine, em_cada,
+      cessai, perseverai, oficio, retorne,
       proclame, confesse, verdade, falsidade,
       somado_a, privado_de, multiplicado_por, partilhado_entre, dízimo_de,
       exaltado_sobre, submisso_a, não_abaixo_de, não_acima_de, conforme_a, dissonante_de,
       em_comunhão_com, ou_porventura, não_seja,
-      "(", ")",
+      "(", ")", ",",
       IDENT, NUM_INT, NUM_REAL, TEXTO }
 ```
 
@@ -258,6 +278,10 @@ Comando  ::= DeclConst
            | ComandoEnquanto
            | ComandoPara
            | ComandoParaCada
+           | Cessai
+           | Perseverai
+           | DefFuncao
+           | Retorne
            | ComandoSaida
            | ComandoEntrada
 ```
@@ -314,7 +338,26 @@ Observação de projeto: o vocabulário fornecido define apenas o mapeamento lex
 
 Essas decisões devem ser confirmadas/ajustadas pelo grupo conforme a implementação real do parser; a estrutura de `ComandoSe`/`ComandoEnquanto`, baseada diretamente no exemplo do enunciado, é a que possui maior grau de certeza.
 
-## 3.6 Comandos de Entrada e Saída
+```
+Cessai     ::= "cessai" "amém"
+Perseverai ::= "perseverai" "amém"
+```
+
+`cessai` (`break`) e `perseverai` (`continue`) só são válidos dentro de `enquanto`/`peregrine`/`em_cada` (verificação semântica por profundidade de laço, com barreira de `oficio`).
+
+## 3.6 Funções
+
+```
+DefFuncao ::= "oficio" Tipo IDENT { Tipo IDENT } Bloco "amém_senhor"
+
+Retorne   ::= "retorne" [ ExpressaoOu ] "amém"
+
+Chamada   ::= IDENT "(" [ ExpressaoOu { "," ExpressaoOu } ] ")"
+```
+
+`DefFuncao` é `Comando`, logo pode aninhar em qualquer `Bloco` (inclusive dentro de outro `oficio`). Parâmetros `Tipo IDENT` repetidos; `Retorne` sem valor = retorno nu (saída antecipada). Chamadas usam `$` como variáveis (`$soma(2, 3)`) e são `Fator` (válidas em qualquer expressão); o parser decide entre variável e chamada por lookahead `IDENT + "("`.
+
+## 3.7 Comandos de Entrada e Saída
 
 ```
 ComandoSaida  ::= "proclame" ExpressaoOu "amém"
@@ -322,7 +365,7 @@ ComandoSaida  ::= "proclame" ExpressaoOu "amém"
 ComandoEntrada ::= "confesse" IDENT "amém"
 ```
 
-## 3.7 Expressões — Precedência e Ausência de Recursão à Esquerda
+## 3.8 Expressões — Precedência e Ausência de Recursão à Esquerda
 
 As expressões são organizadas em uma cadeia de não terminais em ordem crescente de precedência (do nível mais baixo, `ExpressaoOu`, ao mais alto, `Fator`), técnica padrão para expressar precedência sem ambiguidade em GLC:
 
@@ -345,6 +388,7 @@ ExpressaoMul ::= Fator { OpMul Fator }
 OpMul        ::= "multiplicado_por" | "partilhado_entre" | "dízimo_de"
 
 Fator ::= IDENT
+        | Chamada
         | NUM_INT
         | NUM_REAL
         | TEXTO
@@ -361,7 +405,7 @@ Pontos importantes desta subseção:
 3. **Agrupamento com parênteses.** A alternativa `"(" ExpressaoOu ")"` em `Fator` permite reiniciar a precedência dentro de um grupo, possibilitando expressões como `($idade somado_a 1) multiplicado_por 2`.
 4. **Extensão de sinal negativo.** A alternativa `"privado_de" Fator` em `Fator` (reutilizando a palavra reservada de subtração como operador unário de negação, ex.: `privado_de 5`) não decorre diretamente do vocabulário fornecido, mas foi incluída para permitir literais numéricos negativos; pode ser removida caso o grupo não a implemente.
 
-## 3.8 Verificação com o Programa de Exemplo
+## 3.9 Verificação com o Programa de Exemplo
 
 A gramática acima deriva integralmente o programa de exemplo do vocabulário (`em_nome_do_pai ... assim_seja_em_seu_nome_amem`), incluindo:
 
@@ -397,12 +441,17 @@ O parser implementado é um **analisador preditivo por descida recursiva (LL(1))
 | `ComandoEnquanto` | `enquanto ... amém_senhor` | `Enquanto { condicao, corpo }` |
 | `ComandoPara` | `peregrine ... amém_senhor` | `Para { init, condicao, incremento, corpo }` |
 | `ComandoParaCada` | `em_cada ... amém_senhor` | `ParaCada { variavel, colecao, corpo }` |
+| `Cessai` | `cessai amém` (só em laço) | `Cessai { }` |
+| `Perseverai` | `perseverai amém` (só em laço) | `Perseverai { }` |
+| `DefFuncao` | `oficio Tipo IDENT {Tipo IDENT} ... amém_senhor` | `DefFuncao { tipo, nome, params: [Param], corpo }` |
+| `Retorne` | `retorne [ExpressaoOu] amém` | `Retorne { valor? }` (ausente = retorno nu) |
 | `ComandoSaida` | `proclame ... amém` | `Saida { expressao }` |
 | `ComandoEntrada` | `confesse ... amém` | `Entrada { variavel }` |
 | `ExpressaoOu` … `ExpressaoMul` | operadores lógicos/relacionais/aritméticos | `OperacaoBinaria { operador, esquerda, direita }` (um nó por ocorrência do operador; ausência do operador → apenas o operando do nível superior é retornado, sem criar nó) |
 | `ExpressaoNao` (com `não_seja`) | negação lógica | `OperacaoUnaria { operador: "não_seja", operando }` |
 | `Fator` (`"(" ExpressaoOu ")"`) | agrupamento | não gera nó próprio — devolve diretamente o nó de `ExpressaoOu` interno (parênteses não aparecem na AST, só influenciam a árvore durante o parsing) |
 | `Fator` (`IDENT`) | uso de identificador | `Identificador { nome }` |
+| `Fator` (`Chamada`) | chamada de `oficio` | `Chamada { nome, args: [Expressao] }` |
 | `Fator` (`NUM_INT`/`NUM_REAL`/`TEXTO`/`verdade`/`falsidade`) | literal | `Literal { tipo, valor }` |
 
 Este mapeamento é o que o grupo deve estar apto a apresentar/defender: para cada função `parseX()`, indicar qual produção de P ela implementa e qual nó de AST ela devolve.
@@ -428,6 +477,13 @@ ParaCada       { variavel: string, colecao: string, corpo: Comando[] }
 
 Saida          { expressao: Expressao }
 Entrada        { variavel: string }
+
+Cessai         { }
+Perseverai     { }
+Param          { tipo: Tipo, nome: string }
+DefFuncao      { tipo: Tipo, nome: string, params: Param[], corpo: Comando[] }
+Retorne        { valor: Expressao | null }
+Chamada        { nome: string, args: Expressao[] }
 
 // nós de expressão (Expressao = uma das alternativas abaixo)
 OperacaoBinaria { operador: string, esquerda: Expressao, direita: Expressao }
@@ -506,11 +562,17 @@ Implementação: `semantic/symbols.py` (`Symbol`, `SymbolTable`) + `semantic/ana
 | 12 | `proclame`: qualquer tipo (`ExpressaoOu` única) | — (só valida a expressão) |
 | 13 | `confesse`: alvo deve ser `preceito` declarado, não `const` | `ESEM identificador desconhecido` / `ESEM atribuição a constante` |
 | 14 | `em_cada` V1: coleção deve ser `salmo`; variável de iteração declarada `salmo` no escopo do laço | `ESEM em_cada suporta apenas salmo em V1, encontrado <t>` |
+| 15 | `cessai`/`perseverai` só dentro de laço (`enquanto/peregrine/em_cada`); `oficio` aninhado não herda laço externo (barreira por profundidade) | `ESEM 'cessai'/'perseverai' fora de laço ...` |
+| 16 | `oficio` divide o namespace com variáveis (sem redeclaração no mesmo escopo); nome de `oficio` não aceita atribuição | `ESEM redeclaração` / `ESEM atribuição a oficio '<nome>'` |
+| 17 | `retorne` só dentro de `oficio`; com valor, deve ser compatível com o tipo declarado (promoção `int→float` vale); sem valor = retorno nu, sempre válido | `ESEM 'retorne' fora de oficio` / `ESEM ... não é possível retornar <src> como <dest>` |
+| 18 | Chamada: alvo deve ser `oficio` declarado; aridade exata; cada argumento compatível com o parâmetro | `ESEM identificador desconhecido` / `ESEM '<nome>' não é oficio` / `ESEM oficio '<nome>' espera N argumento(s)...` / `ESEM ... passar <src> como <dest>...` |
+| 19 | Dentro de `oficio`, escrita (`seja`, `confesse`) em variável de escopo externo proibida (V1: só leitura; Python criaria local silencioso) | `ESEM '<nome>' pertence a escopo externo a oficio ...` |
 
 ## 5.3 Inferência de tipos (`_tipo`)
 
 - Literal ⇒ próprio tipo; `Identificador` ⇒ tipo da tabela; `não_seja` ⇒ `dogma`; menos unário ⇒ tipo do operando.
 - Binária aritmética ⇒ `versículo` se algum lado é `versículo`, senão `capítulo`; `dízimo_de` ⇒ `capítulo`; relacionais e lógicos ⇒ `dogma`.
+- `Chamada` ⇒ tipo de retorno declarado do `oficio` (após validar aridade e argumentos).
 
 ## 5.4 Formato de erro
 
@@ -545,6 +607,10 @@ Implementação: `codegen/py_generator.py`, API `generate(programa) -> str`. Ind
 | `peregrine Init Cond amém Incr` | desaçucara para `while`: emite `init`, depois `while cond:` + corpo + `incremento` ao fim do laço |
 | `em_cada $v $col` | `for v in col:` nativo |
 | `proclame E` | `print(E)` |
+| `cessai` / `perseverai` | `break` / `continue` (nativos; `peregrine` já desaçucara para `while`) |
+| `oficio T $f T $p ...` + corpo | `def f(p, ...):` + corpo (nome como escrito, sem UPPER; aninhável) |
+| `retorne E` / `retorne` (nu) | `return E` / `return` |
+| `$f(a, b)` | `f(a, b)` |
 | `confesse $x` | `int(input()) / float(input()) / input() / teste de pertinência dogma` conforme tipo declarado |
 | `em_nome_do_pai / assim_seja_em_seu_nome_amem` | comentário de cabeçalho + script top-level (sem wrapper `__main__`) |
 | Bloco vazio | `pass` |
@@ -579,20 +645,20 @@ Stdout ao executar: `É maior de idade e estudante.`
 
 # 7. Testes, CLI e Erros Unificados
 
-## 7.1 Matriz (98 testes, `python -m pytest -q`)
+## 7.1 Matriz (128 testes, `python -m pytest -q`)
 
 | Camada | Arquivo | Qtd | O que cobre |
 |---|---|---|---|
-| Léxico | `tests/lexer/test_lexer.py` | 24 | lista reservada completa, `$`-identificador vs. palavra sem `$` (erro), `$caso` = identificador, `$` sozinho, maior casamento (`amém/amém_senhor`, `doutra_sorte/_caso`), números (`12.` erro), strings + escapes + não-fechada, `# @` erros, linha/coluna, exemplo README zero erros |
-| Parser | `tests/parser/test_parser.py` | 10 | exemplo README forma `Se` esperada (condição `em_comunhão_com` na raiz), cada comando, precedência `2 somado_a 3 multiplicado_por 4`, parênteses, cadeia `doutra_sorte_caso`, erro `amém` ausente |
-| Semântica | `tests/semantic/test_semantic.py` | 15 | 8+ negativos (redeclaração, uso não declarado, reatribuir const, `int→salmo`, condição não-dogma, lógica sobre int, `dízimo_de` com float, `em_cada` sobre não-salmo) + exemplo válido passa |
-| Codegen | `tests/codegen/test_py_generator.py` | 19 | mapeamento §6 por operador/comando, `//` vs `/`, `peregrine→while`, `em_cada→for`, `confesse` casts, zero padrão, UPPER const |
-| E2E | `tests/e2e/test_e2e.py` | 10 | 5 programas × (py == golden + stdout == golden) |
-| CLI | `tests/cli/test_cli.py` | 20 | 5 programas × (`--emit-py-only` == golden, `--run` stdout == golden) + sidecar padrão, `-o`, `--dump-tokens`, `--dump-ast`, erros léxico/sintático/semântico ⇒ 1, arquivo ausente ⇒ 2, `--strict` rejeita sem-init e passa nos goldens |
+| Léxico | `tests/lexer/test_lexer.py` | 26 | lista reservada completa (inclui `cessai/perseverai/oficio/retorne` via loop), `$`-identificador vs. palavra sem `$` (erro), `$caso` = identificador, `$` sozinho, maior casamento (`amém/amém_senhor`, `doutra_sorte/_caso`), números (`12.` erro), strings + escapes + não-fechada, `# @` erros, `,` = COMMA, sequência `$soma(2, 3)`, linha/coluna, exemplo README zero erros |
+| Parser | `tests/parser/test_parser.py` | 14 | exemplo README forma `Se` esperada (condição `em_comunhão_com` na raiz), cada comando, precedência `2 somado_a 3 multiplicado_por 4`, parênteses, cadeia `doutra_sorte_caso`, `cessai/perseverai`, `DefFuncao` + params, `Chamada`, `retorne` nu, erros `amém`/`amém_senhor` ausentes |
+| Semântica | `tests/semantic/test_semantic.py` | 27 | 8+ negativos base (redeclaração, uso não declarado, reatribuir const, `int→salmo`, condição não-dogma, lógica sobre int, `dízimo_de` com float, `em_cada` sobre não-salmo) + 10 de laço/função (`cessai/perseverai` fora de laço, `cessai` em `oficio` sem laço, `retorne` fora de `oficio`, retorno incompatível, aridade, alvo não-`oficio`, atribuição a `oficio`, escrita externa) + válidos (def/chamada, aninhada, recursão em escopo, `retorne` nu) |
+| Codegen | `tests/codegen/test_py_generator.py` | 23 | mapeamento §6 por operador/comando, `//` vs `/`, `peregrine→while`, `em_cada→for`, `confesse` casts, zero padrão, UPPER const, `break/continue`, `def/return/call`, `return` nu, `def` aninhada |
+| E2E | `tests/e2e/test_e2e.py` | 14 | 7 programas × (py == golden + stdout == golden) |
+| CLI | `tests/cli/test_cli.py` | 24 | 7 programas × (`--emit-py-only` == golden, `--run` stdout == golden) + sidecar padrão, `-o`, `--dump-tokens`, `--dump-ast`, erros léxico/sintático/semântico ⇒ 1, arquivo ausente ⇒ 2, `--strict` rejeita sem-init e passa nos goldens |
 
 ## 7.2 Programas E2E (`tests/programs/`)
 
-`hello`, `vars_const`, `caso`, `enquanto_countdown`, `peregrine_sum` — cada um com trio `.holy + .expected_py + .expected_stdout`. `exemplo_readme.holy` (idêntico em AST a `caso.holy` a menos de espaços) é o fixture canônico consumido nos testes de léxico/parser/semântica como "exemplo do README passa nas 3 fases".
+`hello`, `vars_const`, `caso`, `enquanto_countdown`, `peregrine_sum`, `laco_cessai` (`cessai`/`perseverai` em `enquanto`, stdout `1 3 4`), `funcao_soma` (`oficio` soma + fatorial via `$soma(2, 3)`/`$fatorial(5)`, stdout `5 120`) — cada um com trio `.holy + .expected_py + .expected_stdout`. `exemplo_readme.holy` (idêntico em AST a `caso.holy` a menos de espaços) é o fixture canônico consumido nos testes de léxico/parser/semântica como "exemplo do README passa nas 3 fases".
 
 ## 7.3 CLI
 

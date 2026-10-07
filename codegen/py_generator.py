@@ -127,6 +127,9 @@ class _Gen:
         if isinstance(expr, A.Identificador):
             e = self.lookup(expr.nome)
             return e["tipo"] if e else None
+        if isinstance(expr, A.Chamada):
+            e = self.lookup(expr.nome)
+            return e["tipo"] if e else None
         if isinstance(expr, A.OperacaoUnaria):
             if expr.operador == "não_seja":
                 return DOG
@@ -236,6 +239,32 @@ class _Gen:
                 self.pop()
         elif isinstance(node, A.Saida):
             self.emit(f"print({self.gen_expr(node.expressao)}){self.tag(node.linha)}")
+        elif isinstance(node, A.Cessai):
+            self.emit(f"break{self.tag(node.linha)}")
+        elif isinstance(node, A.Perseverai):
+            self.emit(f"continue{self.tag(node.linha)}")
+        elif isinstance(node, A.DefFuncao):
+            # nome como escrito (sem UPPER); params posicionais
+            py_f = self.declare(node.nome, node.tipo, const=False)
+            py_params = []
+            self.push()
+            for p in node.params:
+                py_params.append(self.declare(p.nome, p.tipo, const=False))
+            self.emit(f"def {py_f}({', '.join(py_params)}):{self.tag(node.linha)}")
+            self.indent += 1
+            try:
+                if not node.corpo:
+                    self.emit("pass")
+                for c in node.corpo:
+                    self.gen_cmd(c)
+            finally:
+                self.indent -= 1
+                self.pop()
+        elif isinstance(node, A.Retorne):
+            if node.valor is None:
+                self.emit(f"return{self.tag(node.linha)}")
+            else:
+                self.emit(f"return {self.gen_expr(node.valor)}{self.tag(node.linha)}")
         elif isinstance(node, A.Entrada):
             e = self.lookup(node.variavel)
             py = e["py"] if e else node.variavel
@@ -278,6 +307,9 @@ class _Gen:
             raise ValueError(f"literal desconhecido {expr.tipo}")
         if isinstance(expr, A.Identificador):
             return self.py_name(expr.nome)
+        if isinstance(expr, A.Chamada):
+            args = ", ".join(self.gen_expr(a) for a in expr.args)
+            return f"{self.py_name(expr.nome)}({args})"
         if isinstance(expr, A.OperacaoUnaria):
             if expr.operador == "não_seja":
                 inner = self.gen_expr(expr.operando, _PREC["não_seja"])

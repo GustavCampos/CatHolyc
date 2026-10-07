@@ -23,6 +23,10 @@ FIRST_COMANDO = {
     TokenType.ENQUANTO,
     TokenType.PEREGRINE,
     TokenType.EM_CADA,
+    TokenType.CESSAI,
+    TokenType.PERSEVERAI,
+    TokenType.OFICIO,
+    TokenType.RETORNE,
     TokenType.PROCLAME,
     TokenType.CONFESSE,
 }
@@ -84,6 +88,11 @@ class Parser:
             return self.tokens[self.pos]
         return self.tokens[-1]
 
+    def _peek(self) -> Token:
+        if self.pos + 1 < len(self.tokens):
+            return self.tokens[self.pos + 1]
+        return self.tokens[-1]
+
     def consome(self, esperado: TokenType, nome_esperado: str | None = None) -> Token:
         tok = self.atual()
         if tok.tipo is not esperado:
@@ -124,6 +133,14 @@ class Parser:
             return self.parsePara()
         if t is TokenType.EM_CADA:
             return self.parseParaCada()
+        if t is TokenType.CESSAI:
+            return self.parseCessai()
+        if t is TokenType.PERSEVERAI:
+            return self.parsePerseverai()
+        if t is TokenType.OFICIO:
+            return self.parseDefFuncao()
+        if t is TokenType.RETORNE:
+            return self.parseRetorne()
         if t is TokenType.PROCLAME:
             return self.parseSaida()
         if t is TokenType.CONFESSE:
@@ -216,6 +233,44 @@ class Parser:
         self.consome(TokenType.AMEM_SENHOR, "amém_senhor")
         return A.ParaCada(variavel=var, colecao=col, corpo=corpo, linha=t.linha)
 
+    # Cessai ::= "cessai" "amém"  |  Perseverai ::= "perseverai" "amém"
+    def parseCessai(self) -> A.Cessai:
+        t = self.consome(TokenType.CESSAI, "cessai")
+        self.consome(TokenType.AMEM, "amém")
+        return A.Cessai(linha=t.linha)
+
+    def parsePerseverai(self) -> A.Perseverai:
+        t = self.consome(TokenType.PERSEVERAI, "perseverai")
+        self.consome(TokenType.AMEM, "amém")
+        return A.Perseverai(linha=t.linha)
+
+    # DefFuncao ::= "oficio" Tipo IDENT { Tipo IDENT } Bloco "amém_senhor"
+    # (Comando: pode aninhar — função dentro de qualquer Bloco)
+    def parseDefFuncao(self) -> A.DefFuncao:
+        t = self.consome(TokenType.OFICIO, "oficio")
+        tipo = self.parseTipo()
+        nome_tok = self.consome(TokenType.IDENTIFIER, "IDENT")
+        params = []
+        while self.atual().tipo in _TIPOS:
+            pt = self.parseTipo()
+            pn_tok = self.consome(TokenType.IDENTIFIER, "IDENT")
+            params.append(A.Param(tipo=pt, nome=_nome_ident(pn_tok), linha=pn_tok.linha))
+        corpo = self.parseBloco()
+        self.consome(TokenType.AMEM_SENHOR, "amém_senhor")
+        return A.DefFuncao(
+            tipo=tipo, nome=_nome_ident(nome_tok), params=params,
+            corpo=corpo, linha=t.linha,
+        )
+
+    # Retorne ::= "retorne" [ ExpressaoOu ] "amém"  (sem valor ⇒ retorno nu)
+    def parseRetorne(self) -> A.Retorne:
+        t = self.consome(TokenType.RETORNE, "retorne")
+        valor = None
+        if self.atual().tipo is not TokenType.AMEM:
+            valor = self.parseExpressaoOu()
+        self.consome(TokenType.AMEM, "amém")
+        return A.Retorne(valor=valor, linha=t.linha)
+
     # ComandoSaida ::= "proclame" ExpressaoOu "amém"
     def parseSaida(self) -> A.Saida:
         t = self.consome(TokenType.PROCLAME, "proclame")
@@ -304,6 +359,19 @@ class Parser:
     def parseFator(self) -> object:
         tok = self.atual()
         if tok.tipo is TokenType.IDENTIFIER:
+            # Chamada ::= IDENT "(" [ ExpressaoOu { "," ExpressaoOu } ] ")"
+            # (chamadas usam prefixo $, como variáveis: $soma(2, 3))
+            if self._peek().tipo is TokenType.LPAREN:
+                self.pos += 1
+                self.pos += 1  # consome IDENT e "("
+                args = []
+                if self.atual().tipo is not TokenType.RPAREN:
+                    args.append(self.parseExpressaoOu())
+                    while self.atual().tipo is TokenType.COMMA:
+                        self.pos += 1
+                        args.append(self.parseExpressaoOu())
+                self.consome(TokenType.RPAREN, ")")
+                return A.Chamada(nome=_nome_ident(tok), args=args, linha=tok.linha)
             self.pos += 1
             return A.Identificador(nome=_nome_ident(tok), linha=tok.linha)
         if tok.tipo is TokenType.NUMBER_INT:

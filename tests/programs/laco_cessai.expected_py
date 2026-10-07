@@ -1,0 +1,9 @@
+# em_nome_do_pai
+c = 0
+while c <= 5:
+    c = c + 1
+    if c == 2:
+        continue
+    if c > 4:
+        break
+    print(c)

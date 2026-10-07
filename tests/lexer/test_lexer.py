@@ -159,3 +159,31 @@ def test_eof_appended():
     toks, errs = tokenize("")
     assert errs == []
     assert toks[-1].tipo == TokenType.EOF
+
+
+def test_comma_token():
+    toks, errs = tokenize("$soma(2, 3)")
+    assert errs == []
+    tipos = [t.tipo for t in toks]
+    assert tipos == [
+        TokenType.IDENTIFIER,
+        TokenType.LPAREN,
+        TokenType.NUMBER_INT,
+        TokenType.COMMA,
+        TokenType.NUMBER_INT,
+        TokenType.RPAREN,
+        TokenType.EOF,
+    ]
+
+
+def test_novas_reservadas():
+    pares = {
+        "cessai": TokenType.CESSAI,
+        "perseverai": TokenType.PERSEVERAI,
+        "oficio": TokenType.OFICIO,
+        "retorne": TokenType.RETORNE,
+    }
+    for lex, tipo in pares.items():
+        toks, errs = tokenize(lex)
+        assert errs == []
+        assert toks[0].tipo == tipo

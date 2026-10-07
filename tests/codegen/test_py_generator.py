@@ -184,3 +184,42 @@ def test_shadow_renomeia():
 def test_bloco_vazio_pass():
     out = gen(P("caso verdade amém_senhor"))
     assert "if True:" in out and "pass" in out
+
+
+def test_cessai_perseverai():
+    out = gen(P("enquanto verdade cessai amém perseverai amém amém_senhor"))
+    assert "while True:" in out
+    assert "break" in out and "continue" in out
+
+
+def test_def_call_retorne():
+    out = gen(
+        P(
+            "oficio capítulo $soma capítulo $a capítulo $b "
+            "retorne $a somado_a $b amém amém_senhor "
+            "preceito capítulo $r seja $soma(2, 3) amém "
+            "proclame $r amém"
+        )
+    )
+    assert "def soma(a, b):" in out
+    assert "return a + b" in out
+    assert "r = soma(2, 3)" in out
+
+
+def test_retorne_nu():
+    out = gen(P("oficio salmo $f salmo $s retorne amém amém_senhor"))
+    assert "def f(s):" in out
+    assert "\n    return\n" in out
+
+
+def test_def_aninhada():
+    out = gen(
+        P(
+            "oficio capítulo $f capítulo $n "
+            "oficio capítulo $g capítulo $m retorne $m amém amém_senhor "
+            "retorne $g($n) amém amém_senhor"
+        )
+    )
+    assert "def f(n):" in out
+    assert "    def g(m):" in out
+    assert "return g(n)" in out

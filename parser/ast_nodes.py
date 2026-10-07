@@ -83,6 +83,45 @@ class Entrada:
 
 
 @dataclass
+class Cessai:
+    linha: int
+
+
+@dataclass
+class Perseverai:
+    linha: int
+
+
+@dataclass
+class Param:
+    tipo: str
+    nome: str
+    linha: int
+
+
+@dataclass
+class DefFuncao:
+    tipo: str
+    nome: str
+    params: list
+    corpo: list
+    linha: int
+
+
+@dataclass
+class Retorne:
+    valor: object | None
+    linha: int
+
+
+@dataclass
+class Chamada:
+    nome: str
+    args: list
+    linha: int
+
+
+@dataclass
 class OperacaoBinaria:
     operador: str
     esquerda: object

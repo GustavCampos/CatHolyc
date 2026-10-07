@@ -39,3 +39,10 @@ class SymbolTable:
             if nome in scope:
                 return scope[nome]
         return None
+
+    def depth_of(self, nome: str) -> int | None:
+        """Índice do escopo que declara `nome` (0 = global); None se ausente."""
+        for i in range(len(self.scopes) - 1, -1, -1):
+            if nome in self.scopes[i]:
+                return i
+        return None
