@@ -1,5 +1,69 @@
 ![CatHolyc Logo](images/LOGO.jpg)
 
+# Guia de utilização
+
+Só precisa de Python 3 (sem dependências).
+
+## Seu primeiro programa
+
+Salve como `ola.holy`:
+
+```text
+em_nome_do_pai
+proclame "Olá, mundo." amém
+assim_seja_em_seu_nome_amem
+```
+
+Regras básicas: todo programa começa com `em_nome_do_pai` e termina com `assim_seja_em_seu_nome_amem`; cada comando termina com `amém`; variáveis e constantes usam prefixo `$` (ex. `$idade`). O vocabulário completo está na seção 1.
+
+## Compilar e rodar (`cli.py`)
+
+```sh
+python cli.py ola.holy                  # compila → ola.py (sidecar, mesmo nome do fonte)
+python cli.py ola.holy -o saida.py      # compila → saida.py
+python cli.py ola.holy --emit-py-only   # imprime o Python no stdout, não grava arquivo
+python cli.py ola.holy --run            # compila e executa (stdout repassado; `confesse` lê do stdin)
+python cli.py ola.holy --dump-tokens    # mostra tokens (`linha:col TIPO 'lexema'`) e continua
+python cli.py ola.holy --dump-ast       # mostra a AST em JSON e continua
+python cli.py ola.holy --strict         # avisos de portabilidade V1 viram erro
+```
+
+- Códigos de saída: `0` sucesso · `1` erro léxico/sintático/semântico (ou `--strict`/runtime) · `2` erro de IO/uso. Todos os diagnósticos vão para o stderr, em português.
+- Exemplos prontos em `tests/programs/`: `hello`, `vars_const`, `caso`, `enquanto_countdown`, `peregrine_sum`, `laco_cessai`, `funcao_soma` (cada um com `.holy` + `.expected_py` + `.expected_stdout`).
+- Rodar a suíte: `python -m pytest -q` (128 testes).
+
+## Realce de sintaxe no micro
+
+Arquivo: `editors/micro/syntax/holy.yaml` (detecta `*.holy`).
+
+```sh
+mkdir -p ~/.config/micro/syntax
+cp editors/micro/syntax/holy.yaml ~/.config/micro/syntax/holy.yaml
+```
+
+Reinicie o micro e abra um `.holy` — as cores aplicam sozinhas.
+
+Mapa de cores (monokai/default):
+
+| Grupo | Cor (monokai) | O que pinta |
+|---|---|---|
+| `preproc` | laranja | `mandamento`, `preceito` |
+| `type` | ciano | `capítulo`, `versículo`, `salmo`, `dogma` |
+| `special` | verde | `$variáveis` (qualquer `$nome`, inclusive `$caso`) |
+| `statement` | rosa | estrutura: `caso`, `doutra_sorte[_caso]`, `enquanto`, `peregrine`, `em_cada`, `cessai`, `perseverai`, `oficio`, `retorne`, `proclame`, `confesse`, `em_nome_do_pai`, `amém[_senhor]`, `assim_seja_em_seu_nome_amem` |
+| `default` | branco-cinza | operadores: `seja`, `somado_a`, `privado_de`, `multiplicado_por`, `partilhado_entre`, `dízimo_de`, relacionais, lógicos, `,` |
+| `constant.string` | amarelo | `"texto"` |
+| `constant.number` / `constant.bool.*` | roxo | `18`, `3.14`, `verdade`, `falsidade` |
+| `comment` | cinza | `glosa(...)`, `\|> ... <\|` |
+
+Notas:
+
+- Só colore (regex por linha/bloco); não valida código. Quem valida é a CLI: `python cli.py prog.holy --run` (erros em português no stderr, saída 1).
+- Regras longas vêm por último no YAML (`amém_senhor` depois de `amém`, `doutra_sorte_caso` depois de `doutra_sorte`), porque no micro a regra de baixo sobrescreve a de cima.
+- Operadores usam `default` de propósito: no monokai `statement == symbol.operator` (mesmo rosa), e `constant` colidiria com números/bools (roxo).
+
+---
+
 # 1 Escopo e Vocabulário da Linguagem
 
 ## 1. Tipos primitivos
@@ -687,37 +751,3 @@ Erro semântico: linha <N> — <msg>
 ```
 
 Léxico acumula (panic-mode, resume próximo char); parser e semântica fail-fast no primeiro erro.
-
----
-
-# 8. Realce de sintaxe no micro
-
-Arquivo: `editors/micro/syntax/holy.yaml` (detecta `*.holy`).
-
-Instalar:
-
-```sh
-mkdir -p ~/.config/micro/syntax
-cp editors/micro/syntax/holy.yaml ~/.config/micro/syntax/holy.yaml
-```
-
-Reinicie o micro e abra um `.holy` — as cores aplicam sozinhas.
-
-Mapa de cores (monokai/default):
-
-| Grupo | Cor (monokai) | O que pinta |
-|---|---|---|
-| `preproc` | laranja | `mandamento`, `preceito` |
-| `type` | ciano | `capítulo`, `versículo`, `salmo`, `dogma` |
-| `special` | verde | `$variáveis` (qualquer `$nome`, inclusive `$caso`) |
-| `statement` | rosa | estrutura: `caso`, `doutra_sorte[_caso]`, `enquanto`, `peregrine`, `em_cada`, `cessai`, `perseverai`, `oficio`, `retorne`, `proclame`, `confesse`, `em_nome_do_pai`, `amém[_senhor]`, `assim_seja_em_seu_nome_amem` |
-| `default` | branco-cinza | operadores: `seja`, `somado_a`, `privado_de`, `multiplicado_por`, `partilhado_entre`, `dízimo_de`, relacionais, lógicos, `,` |
-| `constant.string` | amarelo | `"texto"` |
-| `constant.number` / `constant.bool.*` | roxo | `18`, `3.14`, `verdade`, `falsidade` |
-| `comment` | cinza | `glosa(...)`, `\|> ... <\|` |
-
-Notas:
-
-- Só colore (regex por linha/bloco); não valida código. O linter de verdade é a CLI: `python cli.py prog.holy --run` (erros em português no stderr, saída 1).
-- Regras longas vêm por último no YAML (`amém_senhor` depois de `amém`, `doutra_sorte_caso` depois de `doutra_sorte`), porque no micro a regra de baixo sobrescreve a de cima.
-- Operadores usam `default` de propósito: no monokai `statement == symbol.operator` (mesmo rosa), e `constant` colidiria com números/bools (roxo).
