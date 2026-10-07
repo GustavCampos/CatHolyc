@@ -97,12 +97,12 @@
 ```text
 em_nome_do_pai
 
-mandamento capítulo maioridade seja 18 amém
+mandamento capítulo $maioridade seja 18 amém
 
-preceito capítulo idade seja 21 amém
-preceito dogma estudante seja verdade amém
+preceito capítulo $idade seja 21 amém
+preceito dogma $estudante seja verdade amém
 
-caso idade exaltado_sobre maioridade em_comunhão_com estudante conforme_a verdade
+caso $idade exaltado_sobre $maioridade em_comunhão_com $estudante conforme_a verdade
     proclame "É maior de idade e estudante." amém
 doutra_sorte
     proclame "A condição não foi satisfeita." amém
@@ -110,6 +110,8 @@ amém_senhor
 
 assim_seja_em_seu_nome_amem
 ```
+
+> Variáveis e constantes usam prefixo obrigatório `$` (estilo PHP): `$idade`, `$maioridade`. O `$` identifica o que é variável/constante; palavras sem `$` nunca são identificadores.
 ---
 
 # 2. Especificação Léxica
@@ -126,7 +128,7 @@ O alfabeto da linguagem é definido como a união dos seguintes subconjuntos de 
 |---|---|---|
 | Σ_letras | `a`–`z`, `A`–`Z` | formação de palavras reservadas e identificadores |
 | Σ_dígitos | `0`–`9` | formação de literais numéricos e parte de identificadores |
-| Σ_especiais | `_` `+` `-` `*` `/` `%` `=` `>` `<` `!` `&` `|` `(` `)` `"` `.` `,` | operadores, delimitadores e pontuação |
+| Σ_especiais | `_` `+` `-` `*` `/` `%` `=` `>` `<` `!` `&` `|` `(` `)` `"` `.` `,` `$` | operadores, delimitadores, pontuação e prefixo `$` de identificador |
 | Σ_brancos | espaço (` `), tabulação (`\t`), quebra de linha (`\n`, `\r\n`) | separadores, descartados na formação de tokens |
 
 Observação: o caractere `_` (sublinhado) integra a classe de formação de identificadores e palavras reservadas, já que todo o vocabulário da linguagem é construído por composição de palavras unidas por `_` (ex.: `doutra_sorte_caso`, `amém_senhor`). Por simplificação notacional, letras acentuadas do português (à, é, í, ó, ú, ã, õ, â, ê) também integram Σ_letras, pois ocorrem em palavras reservadas como `em_comunhão_com` e `não_abaixo_de`.
@@ -138,7 +140,7 @@ Toda cadeia de entrada é, portanto, um elemento de Σ*, e cada categoria de tok
 | Categoria | Expressão Regular / Padrão | Exemplo de Lexema | Descrição |
 |---|---|---|---|
 | PALAVRA_RESERVADA | ver Tabela 2.3 (conjunto fechado de literais) | `caso`, `enquanto`, `capítulo` | Palavras com significado fixo na linguagem; têm prioridade sobre IDENTIFICADOR quando o lexema coincide |
-| IDENTIFICADOR | `[a-zA-Zà-ú_][a-zA-Zà-ú0-9_]*` | `idade`, `maioridade`, `estudante` | Nome de variável ou constante definido pelo usuário, desde que não coincida com uma palavra reservada |
+| IDENTIFICADOR | `\$[a-zA-Zà-ú_][a-zA-Zà-ú0-9_]*` | `$idade`, `$maioridade`, `$estudante` | Nome de variável ou constante (prefixo `$` obrigatório, estilo PHP); `$caso` é identificador, não palavra reservada; palavra sem `$` nunca é identificador |
 | NUM_INTEIRO | `[0-9]+` | `18`, `21` | Literal do tipo `capítulo` (int) |
 | NUM_REAL | `[0-9]+\.[0-9]+` | `3.14`, `0.5` | Literal do tipo `versículo` (float/double) |
 | LITERAL_TEXTO | `"([^"\n\\]|\\.)*"` | `"É maior de idade e estudante."` | Literal do tipo `salmo` (char*); sequência entre aspas duplas, sem quebra de linha, com suporte a escape (`\"`, `\\`) |
@@ -154,7 +156,7 @@ Toda cadeia de entrada é, portanto, um elemento de Σ*, e cada categoria de tok
 | BRANCO | `[ \t]+` | — | Espaço/tabulação; descartado, não gera token |
 | QUEBRA_LINHA | `\r\n|\n` | — | Incrementa o contador de linhas; descartada, não gera token |
 | COMENTÁRIO | `glosa\(([^)]*)\)` ou `\|>.*?<\|` (bloco, DOTALL não-guloso) | `glosa(explica o versículo)`, `\|> anota <\|` | Comentário de linha/bloco; descartado, não gera token; `\|>` sem `<\|` ⇒ erro léxico |
-| ERRO_LEXICO | qualquer cadeia de Σ* não reconhecida pelas regras acima | `#`, `@`, `12.`, `"texto não fechado` | Símbolo ou lexema inválido; gera mensagem de erro (ver 2.6) |
+| ERRO_LEXICO | qualquer cadeia de Σ* não reconhecida pelas regras acima | `#`, `@`, `$` sozinho, `12.`, `"texto não fechado`, palavra sem `$` como `idade` | Símbolo ou lexema inválido; gera mensagem de erro (ver 2.6) |
 
 ## 2.3 Classes de Palavras da Linguagem
 
@@ -162,7 +164,7 @@ Toda cadeia de entrada é, portanto, um elemento de Σ*, e cada categoria de tok
 
 `capítulo`, `versículo`, `salmo`, `dogma`, `mandamento`, `preceito`, `seja`, `somado_a`, `privado_de`, `multiplicado_por`, `partilhado_entre`, `dízimo_de`, `exaltado_sobre`, `submisso_a`, `não_abaixo_de`, `não_acima_de`, `conforme_a`, `dissonante_de`, `em_comunhão_com`, `ou_porventura`, `não_seja`, `caso`, `doutra_sorte_caso`, `doutra_sorte`, `enquanto`, `peregrine`, `em_cada`, `proclame`, `confesse`, `verdade`, `falsidade`, `em_nome_do_pai`, `amém`, `amém_senhor`, `assim_seja_em_seu_nome_amem`
 
-**b) Identificadores** — L_id = { w ∈ Σ* | w = letra (letra | dígito | `_`)*, w ∉ palavras_reservadas }. Ex.: `idade`, `maioridade`, `estudante`.
+**b) Identificadores** — L_id = { `$` letra (letra | dígito | `_`)* }. Ex.: `$idade`, `$maioridade`, `$estudante`. Prefixo `$` obrigatório (estilo PHP); palavra sem `$` nunca é identificador (gera erro léxico, mesmo que não seja reservada). `$` + palavra reservada (ex. `$caso`) é identificador válido.
 
 **c) Literais numéricos**
 - Inteiro (`capítulo`): L_int = `[0-9]+`
@@ -178,7 +180,7 @@ Toda cadeia de entrada é, portanto, um elemento de Σ*, e cada categoria de tok
 
 Espaços (` `), tabulações (`\t`) e quebras de linha (`\n` ou `\r\n`) pertencem à linguagem regular `[ \t\r\n]+`, mas **não geram token**: são consumidos e descartados pelo analisador léxico entre o reconhecimento de dois lexemas. A quebra de linha, entretanto, incrementa um contador interno de linha, usado para localizar erros léxicos e sintáticos.
 
-O vocabulário original da linguagem não define uma sintaxe de comentários. Como o item é opcional, propõe-se, para fins de formalização, duas convenções equivalentes, ambas descartadas sem gerar token, de forma análoga aos espaços em branco: (1) comentários delimitados pela palavra-chave `glosa` seguida de conteúdo entre parênteses — `glosa(comentário)` — reconhecidos por `glosa\([^)]*\)`, sem aninhamento; (2) comentários de bloco delimitados por `|>` (abertura) e `<|` (fechamento) — `|> comentário <|` — reconhecidos por `\|>.*?<\|` (DOTALL, não-guloso, primeira ocorrência de `<|` fecha), sem aninhamento em V1, podendo conter quebras de linha (contador de linha/coluna atualizado). `|>` sem `<|` de fechamento ⇒ erro léxico com panic-mode. `glosa` só inicia comentário se seguida imediatamente de `(`; caso contrário vale maximal munch como identificador.
+O vocabulário original da linguagem não define uma sintaxe de comentários. Como o item é opcional, propõe-se, para fins de formalização, duas convenções equivalentes, ambas descartadas sem gerar token, de forma análoga aos espaços em branco: (1) comentários delimitados pela palavra-chave `glosa` seguida de conteúdo entre parênteses — `glosa(comentário)` — reconhecidos por `glosa\([^)]*\)`, sem aninhamento; (2) comentários de bloco delimitados por `|>` (abertura) e `<|` (fechamento) — `|> comentário <|` — reconhecidos por `\|>.*?<\|` (DOTALL, não-guloso, primeira ocorrência de `<|` fecha), sem aninhamento em V1, podendo conter quebras de linha (contador de linha/coluna atualizado). `|>` sem `<|` de fechamento ⇒ erro léxico com panic-mode. `glosa` só inicia comentário se seguida imediatamente de `(`; caso contrário (ex. `glosario`) é erro léxico — identificadores exigem prefixo `$` (ex. `$glosario`).
 
 ## 2.5 Estratégia de Maior Casamento (Longest Match)
 
@@ -195,7 +197,7 @@ O mesmo princípio aplica-se, por completude, a literais numéricos: `18` e `18.
 
 ## 2.6 Tratamento de Erros Léxicos
 
-Quando o analisador léxico encontra um caractere que não inicia nenhuma transição válida em Σ (por exemplo `#`, `@`, `$`), ou uma cadeia que inicia um padrão válido mas não o completa corretamente (por exemplo um literal de texto sem aspas de fechamento, ou um número como `12.` sem dígitos após o ponto), ele reporta um **erro léxico** e interrompe o reconhecimento daquele lexema, emitindo mensagem no formato:
+Quando o analisador léxico encontra um caractere que não inicia nenhuma transição válida em Σ (por exemplo `#`, `@`, `$` sozinho ou `$` seguido de dígito), uma palavra sem prefixo `$` (por exemplo `idade`), ou uma cadeia que inicia um padrão válido mas não o completa corretamente (por exemplo um literal de texto sem aspas de fechamento, ou um número como `12.` sem dígitos após o ponto), ele reporta um **erro léxico** e interrompe o reconhecimento daquele lexema, emitindo mensagem no formato:
 
 ```
 Erro léxico: símbolo ou lexema inválido '<lexema>' na linha <N>
@@ -236,7 +238,7 @@ T = { em_nome_do_pai, assim_seja_em_seu_nome_amem,
       IDENT, NUM_INT, NUM_REAL, TEXTO }
 ```
 
-`IDENT`, `NUM_INT`, `NUM_REAL` e `TEXTO` são os terminais “lexicais” definidos por expressão regular na seção 2 (categorias IDENTIFICADOR, NUM_INTEIRO, NUM_REAL e LITERAL_TEXTO), tratados aqui como átomos indivisíveis, já resolvidos pelo analisador léxico.
+`IDENT` (`\$[letra][letra|dígito|_]*`, ex. `$idade`), `NUM_INT`, `NUM_REAL` e `TEXTO` são os terminais “lexicais” definidos por expressão regular na seção 2 (categorias IDENTIFICADOR, NUM_INTEIRO, NUM_REAL e LITERAL_TEXTO), tratados aqui como átomos indivisíveis, já resolvidos pelo analisador léxico. O parser remove o prefixo `$` e a AST guarda o nome puro (`idade`); o gerador Python emite sem `$`.
 
 **S (símbolo inicial):** `S = Programa`
 
@@ -288,7 +290,7 @@ ComandoSe ::= "caso" ExpressaoOu Bloco
 Essa produção reflete diretamente o exemplo de referência do vocabulário: a condição do `caso` (if) é seguida de um `Bloco` sem marcador próprio de abertura (o próprio primeiro `Comando` já delimita o início); zero ou mais ramos `doutra_sorte_caso` (else if) podem ocorrer, cada um com sua condição e bloco; um ramo final opcional `doutra_sorte` (else), sem condição; e a estrutura inteira — incluindo todos os ramos — é fechada por um único `amém_senhor`, exatamente como no exemplo:
 
 ```
-caso idade exaltado_sobre maioridade em_comunhão_com estudante conforme_a verdade
+caso $idade exaltado_sobre $maioridade em_comunhão_com $estudante conforme_a verdade
     proclame "É maior de idade e estudante." amém
 doutra_sorte
     proclame "A condição não foi satisfeita." amém
@@ -356,7 +358,7 @@ Pontos importantes desta subseção:
 
 1. **Não ambiguidade e precedência.** Cada nível de operador (`ou_porventura` < `em_comunhão_com` < `não_seja` < relacionais < aditivos < multiplicativos, do menor para o maior) só pode combinar operandos do nível imediatamente superior, o que fixa uma única árvore de derivação possível para qualquer expressão válida — eliminando a ambiguidade clássica de gramáticas do tipo `E ::= E op E`. Por exemplo, `2 somado_a 3 multiplicado_por 4` é necessariamente analisado como `2 somado_a (3 multiplicado_por 4)`, pois `ExpressaoMul` (multiplicação) só é alcançada a partir de `ExpressaoAdd` (soma) em um nível mais interno da derivação.
 2. **Ausência de recursão à esquerda.** Todas as repetições (`{ }`) substituem produções que, em BNF clássico, seriam recursivas à esquerda (ex.: em vez de `ExpressaoAdd ::= ExpressaoAdd OpAdd ExpressaoMul | ExpressaoMul`, usa-se `ExpressaoAdd ::= ExpressaoMul { OpAdd ExpressaoMul }`). Isso é o que permite implementação direta por descida recursiva sem entrar em looping infinito, já que cada não terminal, ao ser invocado, consome ao menos um símbolo antes de qualquer nova chamada recursiva à esquerda.
-3. **Agrupamento com parênteses.** A alternativa `"(" ExpressaoOu ")"` em `Fator` permite reiniciar a precedência dentro de um grupo, possibilitando expressões como `(idade somado_a 1) multiplicado_por 2`.
+3. **Agrupamento com parênteses.** A alternativa `"(" ExpressaoOu ")"` em `Fator` permite reiniciar a precedência dentro de um grupo, possibilitando expressões como `($idade somado_a 1) multiplicado_por 2`.
 4. **Extensão de sinal negativo.** A alternativa `"privado_de" Fator` em `Fator` (reutilizando a palavra reservada de subtração como operador unário de negação, ex.: `privado_de 5`) não decorre diretamente do vocabulário fornecido, mas foi incluída para permitir literais numéricos negativos; pode ser removida caso o grupo não a implemente.
 
 ## 3.8 Verificação com o Programa de Exemplo
@@ -438,7 +440,7 @@ Todo nó carrega também a **linha** do token que o originou (herdada do token l
 
 ## 4.4 Construção da AST — Exemplo
 
-Para a condição `idade exaltado_sobre maioridade em_comunhão_com estudante conforme_a verdade` (seção 3.4), o parser produz:
+Para a condição `$idade exaltado_sobre $maioridade em_comunhão_com $estudante conforme_a verdade` (seção 3.4), o parser produz:
 
 ```
 OperacaoBinaria {
@@ -452,6 +454,8 @@ OperacaoBinaria {
 }
 ```
 
+(`$idade` no fonte vira `Identificador{"idade"}` — `$` removido no parser.)
+
 Note que a estrutura reflete exatamente a precedência definida em 3.7: `em_comunhão_com` (nível `ExpressaoE`) fica na raiz, com as duas comparações relacionais (nível mais interno) como filhas — sem qualquer ambiguidade, e sem que o parser precise consultar tabela de precedência em tempo de execução, já que a hierarquia está embutida na própria cadeia de chamadas `parseExpressaoOu → parseExpressaoE → ... → parseFator`.
 
 ## 4.5 Tratamento de Erros Sintáticos~
@@ -464,8 +468,8 @@ Erro sintático: linha <N> — token encontrado '<lexema>' (<categoria>), espera
 
 Exemplos:
 
-- Entrada `preceito capítulo idade 21 amém` (faltando `seja`): `Erro sintático: linha 3 — token encontrado NUM_INT '21', esperado 'seja'`.
-- Entrada `caso idade exaltado_sobre maioridade` sem bloco nem `amém_senhor` antes do fim do arquivo: `Erro sintático: linha 5 — token encontrado EOF, esperado um comando ou 'amém_senhor'`.
-- Entrada com parêntese não fechado `(idade somado_a 1`: `Erro sintático: linha 4 — token encontrado 'amém', esperado ')'`.
+- Entrada `preceito capítulo $idade 21 amém` (faltando `seja`): `Erro sintático: linha 3 — token encontrado NUM_INT '21', esperado 'seja'`.
+- Entrada `caso $idade exaltado_sobre $maioridade` sem bloco nem `amém_senhor` antes do fim do arquivo: `Erro sintático: linha 5 — token encontrado EOF, esperado um comando ou 'amém_senhor'`.
+- Entrada com parêntese não fechado `($idade somado_a 1`: `Erro sintático: linha 4 — token encontrado 'amém', esperado ')'`.
 
 O `<elemento esperado>` deve ser preenchido com o terminal (ou conjunto FIRST do não terminal, quando a produção tiver alternativas) previsto pela gramática no ponto da falha — informação que a própria função `parseX()` já possui, pois é ela quem decide qual `consome(...)` chamar.

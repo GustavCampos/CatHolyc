@@ -44,19 +44,22 @@ SPEC.md
 - API: `tokenize(source: str) -> tuple[list[Token], list[LexError]]`
 - Handle `\r\n`, `\n`; track `line`, `col`
 - Skip: `[ \t]+`, newlines count only, `glosa(...)` + `|> ... <|` comments (both discarded, newlines inside count)
-- Word chars: `[A-Za-zÀ-Úà-ú0-9_]`
+- Identifiers require PHP-style `$` prefix: `\$[A-Za-zÀ-Úà-ú_][A-Za-zÀ-Úà-ú0-9_]*` ⇒ `IDENTIFIER` (lexeme keeps `$`, e.g. `$idade`); bare words without `$` are never identifiers
+- Word chars: `[A-Za-zÀ-Úà-ú0-9_]` plus `$` only as identifier first char
 - Longest match mandatory:
   - Consume maximal word run, then reserved lookup
   - Resolves `amém` vs `amém_senhor`, `doutra_sorte` vs `doutra_sorte_caso`
+  - `$`-form bypasses reserved lookup: `$caso` ⇒ `IDENTIFIER`, not keyword
 - Priority per position:
   0. comments (discarded, no token; newlines inside update `line`/`col`):
      - `glosa\([^)]*\)` ⇒ skip to `)`; V1 no nesting, single-line use
      - `\|>.*?<\|` (DOTALL, non-greedy) ⇒ block skip to first `<|`; V1 no nesting; unterminated `|>` ⇒ lex error, panic-mode resume after `|>`
   1. string `"([^"\n\\]|\\.)*"` ⇒ `TEXT_LITERAL`; unterminated ⇒ error
   2. number `[0-9]+\.[0-9]+` ⇒ `NUMBER_REAL`, else `[0-9]+` ⇒ `NUMBER_INT`; `12.` ⇒ error
-  3. word run ⇒ reserved lookup ⇒ else `IDENTIFIER`
-  4. `(` `)` ⇒ `LPAREN` `RPAREN`
-  5. else ⇒ `ERRO_LEXICO`
+  3. `$` + word run ⇒ `IDENTIFIER` (lexeme includes `$`); lone `$` or `$` + non-letter ⇒ `ERRO_LEXICO`; `$caso` stays identifier
+  4. word run ⇒ reserved lookup ⇒ else `ERRO_LEXICO` (bare non-reserved words are errors, not identifiers)
+  5. `(` `)` ⇒ `LPAREN` `RPAREN`
+  6. else ⇒ `ERRO_LEXICO`
 - Reserved map: exact strings README §2.3, including accented forms `não_*`, `em_comunhão_com`
 - Errors: collect, panic-mode resume next char
 - Append `EOF` token at end
@@ -66,6 +69,7 @@ SPEC.md
 - Recursive descent, LL(1), no backtrack
 - Cursor + `atual()` + `consome(expected)`
 - Entry: `parse(tokens) -> Programa`
+- IDENT in source is `$`-prefixed (`$idade`); parser strips `$` via `_nome_ident()` so AST `nome` is bare (`idade`); Python emit has no `$`
 - Functions map 1:1 to nonterminals README §3:
   `parsePrograma, parseBloco, parseComando, parseDeclConst, parseDeclVar, parseAtribuicao, parseSe, parseEnquanto, parsePara, parseParaCada, parseSaida, parseEntrada, parseExpressaoOu/E/Nao/Rel/Add/Mul, parseFator`
 - `Bloco` = loop while `atual() in FIRST(Comando)`; return `list[Comando]`; emit no node
@@ -153,7 +157,7 @@ em_cada ... amém_senhor
 - Indent: 4 spaces; maintain indent stack; `amém_senhor` pops stack
 - Mapping:
   - `capítulo` ⇒ `int`; `versículo` ⇒ `float`; `salmo` ⇒ `str`; `dogma` ⇒ `bool`
-  - `mandamento/preceito x seja E` ⇒ `x = E`; const via UPPER convention + semantic enforcement then erase
+  - `mandamento/preceito x seja E` ⇒ `x = E` (source `$x`, AST/emit bare `x`); const via UPPER convention + semantic enforcement then erase
   - `seja` ⇒ `=`
   - `somado_a/privado_de/multiplicado_por/partilhado_entre/dízimo_de` ⇒ `+ - * / %`; note `/` semantic: Python `/` always float; emit `//` when both operands `int` and source intent = integer division, or document difference; decide per project and keep consistent
   - `exaltado_sobre/submisso_a/não_abaixo_de/não_acima_de/conforme_a/dissonante_de` ⇒ `> < >= <= == !=`; strings compare with `==` directly
@@ -198,7 +202,7 @@ Erro semântico: linha <N> — <msg>
 - Parser/Semantic: fail-fast first error
 
 ## 11 Tests
-- Lexer golden: reserved full list, longest-match pairs, numbers, strings + escapes, errors `# @ 12. "aberto`, line/col tracking
+  - Lexer golden: reserved full list, `$`-identifier / bare-word-error / lone-`$` / `$caso`-is-identifier, longest-match pairs, numbers, strings + escapes, errors `# @ 12. "aberto`, line/col tracking
 - Parser golden: README example + each command + precedence test `2 somado_a 3 multiplicado_por 4` + parens + `doutra_sorte_caso` chain + missing `amém` error
 - Semantic negative: redeclare, undeclared use, const reassign, int→salmo assign, non-dogma condition, logic on int
 - E2E: run 5 programs: hello, vars/const, caso, enquanto countdown, peregrine sum; diff stdout vs expected

@@ -36,9 +36,17 @@ def test_readme_example_se_shape():
     assert se.senao is not None and len(se.senao) == 1
 
 
+def test_dollar_prefix_stripped_in_ast():
+    prog = parse_src(
+        "em_nome_do_pai preceito capítulo $x seja 1 amém proclame $x amém assim_seja_em_seu_nome_amem"
+    )
+    assert prog.comandos[0].nome == "x"
+    assert prog.comandos[1].expressao.nome == "x"
+
+
 def test_decl_var_sem_init_e_atribuicao():
     prog = parse_src(
-        "em_nome_do_pai preceito capítulo x amém x seja 1 amém assim_seja_em_seu_nome_amem"
+        "em_nome_do_pai preceito capítulo $x amém $x seja 1 amém assim_seja_em_seu_nome_amem"
     )
     assert isinstance(prog.comandos[0], A.DeclVar)
     assert prog.comandos[0].valor is None
@@ -82,9 +90,9 @@ def test_enquanto_para_paracada_entrada():
     prog = parse_src(
         "em_nome_do_pai "
         "enquanto verdade proclame 1 amém amém_senhor "
-        "peregrine i seja 0 amém i submisso_a 10 amém i seja i somado_a 1 amém proclame i amém amém_senhor "
-        "em_cada c texto proclame c amém amém_senhor "
-        "confesse x amém "
+        "peregrine $i seja 0 amém $i submisso_a 10 amém $i seja $i somado_a 1 amém proclame $i amém amém_senhor "
+        "em_cada $c $texto proclame $c amém amém_senhor "
+        "confesse $x amém "
         "assim_seja_em_seu_nome_amem"
     )
     assert isinstance(prog.comandos[0], A.Enquanto)
@@ -102,7 +110,7 @@ def test_unarios_nao_e_menos():
 
 
 def test_missing_amem_error():
-    toks, errs = tokenize("em_nome_do_pai preceito capítulo idade 21 amém assim_seja_em_seu_nome_amem")
+    toks, errs = tokenize("em_nome_do_pai preceito capítulo $idade 21 amém assim_seja_em_seu_nome_amem")
     assert errs == []
     with pytest.raises(ParserError, match="Erro sintático"):
         parse(toks)

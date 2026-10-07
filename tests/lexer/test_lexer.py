@@ -57,6 +57,40 @@ def test_invalid_symbols_collect():
     assert len(errs) == 2
 
 
+def test_dollar_identifier():
+    toks, errs = tokenize("$idade $maioridade $_x $a1")
+    assert errs == []
+    assert all(t.tipo == TokenType.IDENTIFIER for t in toks if t.tipo != TokenType.EOF)
+    assert toks[0].lexema == "$idade"
+
+
+def test_bare_word_not_identifier():
+    # variables/constants require '$' prefix; bare words are lexical errors
+    _, errs = tokenize("idade")
+    assert len(errs) == 1
+    _, errs = tokenize("maioridade")
+    assert len(errs) == 1
+
+
+def test_lone_dollar_error():
+    _, errs = tokenize("$")
+    assert len(errs) == 1
+
+
+def test_dollar_followed_by_digit_error():
+    _, errs = tokenize("$123")
+    # '$' errors, '123' tokenizes as NUMBER_INT
+    assert len(errs) == 1
+
+
+def test_dollar_reserved_word_is_identifier():
+    # '$' prefix disambiguates: '$caso' is a variable, not keyword 'caso'
+    toks, errs = tokenize("$caso")
+    assert errs == []
+    assert toks[0].tipo == TokenType.IDENTIFIER
+    assert toks[0].lexema == "$caso"
+
+
 def test_line_col_tracking():
     toks, _ = tokenize("18\n21")
     assert toks[0].linha == 1
@@ -75,9 +109,14 @@ def test_glosa_comment_skipped():
 
 
 def test_glosa_like_identifier():
-    toks, errs = tokenize("glosario")
+    toks, errs = tokenize("$glosario")
     assert errs == []
     assert toks[0].tipo == TokenType.IDENTIFIER
+
+
+def test_bare_glosario_is_error():
+    _, errs = tokenize("glosario")
+    assert len(errs) == 1
 
 
 def test_block_comment_inline():
@@ -94,9 +133,10 @@ def test_block_comment_multiline_counts_lines():
 
 
 def test_block_comment_unterminated_error():
-    toks, errs = tokenize("18 |> aberto")
+    toks, errs = tokenize("18 |> $aberto")
     assert len(errs) == 1
     assert toks[0].lexema == "18"
+    assert toks[1].lexema == "$aberto"
 
 
 def test_comment_inside_string_not_comment():

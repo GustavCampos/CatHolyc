@@ -1,8 +1,8 @@
 em_nome_do_pai
-preceito capítulo i seja 1 amém
-preceito capítulo soma seja 0 amém
-peregrine i seja 1 amém i não_acima_de 5 amém i seja i somado_a 1 amém
-soma seja soma somado_a i amém
+preceito capítulo $i seja 1 amém
+preceito capítulo $soma seja 0 amém
+peregrine $i seja 1 amém $i não_acima_de 5 amém $i seja $i somado_a 1 amém
+$soma seja $soma somado_a $i amém
 amém_senhor
-proclame soma amém
+proclame $soma amém
 assim_seja_em_seu_nome_amem

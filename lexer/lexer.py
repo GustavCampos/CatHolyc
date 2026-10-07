@@ -147,15 +147,35 @@ def tokenize(source: str) -> tuple[list[Token], list[LexError]]:
                 i = j
             continue
 
+        # 2b. $identifier (PHP-style; only $-form yields IDENTIFIER)
+        if c == "$":
+            start_line, start_col = linha, cur_col()
+            if i + 1 < n and _is_word_start(source[i + 1]):
+                j = i + 2
+                while j < n and _is_word_part(source[j]):
+                    j += 1
+                lex = source[i:j]
+                tokens.append(Token(TokenType.IDENTIFIER, lex, start_line, start_col))
+                coluna += len(lex)
+                i = j
+            else:
+                errors.append(LexError(c, start_line, start_col))
+                i += 1
+                coluna += 1
+            continue
+
         # 3. word run (maximal munch) + reserved lookup
+        # NOTE: bare non-reserved words are NOT identifiers (require $ prefix)
         if _is_word_start(c):
             start_line, start_col = linha, cur_col()
             j = i
             while j < n and _is_word_part(source[j]):
                 j += 1
             lex = source[i:j]
-            tipo = RESERVED_MAP.get(lex, TokenType.IDENTIFIER)
-            tokens.append(Token(tipo, lex, start_line, start_col))
+            if lex in RESERVED_MAP:
+                tokens.append(Token(RESERVED_MAP[lex], lex, start_line, start_col))
+            else:
+                errors.append(LexError(lex, start_line, start_col))
             coluna += len(lex)
             i = j
             continue

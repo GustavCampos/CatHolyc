@@ -67,6 +67,13 @@ def _decode_texto(lex: str) -> str:
     return "".join(out)
 
 
+def _nome_ident(tok: Token) -> str:
+    # Lexer lexeme includes PHP-style '$' prefix; AST stores bare name
+    # so semantic/codegen stay unchanged (Python emit has no '$').
+    lex = tok.lexema
+    return lex[1:] if lex.startswith("$") else lex
+
+
 class Parser:
     def __init__(self, tokens: list[Token]):
         self.tokens = tokens
@@ -133,10 +140,11 @@ class Parser:
         return tok.lexema
 
     # DeclConst ::= "mandamento" Tipo IDENT "seja" ExpressaoOu "amém"
+    # IDENT is '$'-prefixed in source (e.g. $idade); AST stores bare name.
     def parseDeclConst(self) -> A.DeclConst:
         t = self.consome(TokenType.MANDAMENTO, "mandamento")
         tipo = self.parseTipo()
-        nome = self.consome(TokenType.IDENTIFIER, "IDENT").lexema
+        nome = _nome_ident(self.consome(TokenType.IDENTIFIER, "IDENT"))
         self.consome(TokenType.SEJA, "seja")
         valor = self.parseExpressaoOu()
         self.consome(TokenType.AMEM, "amém")
@@ -146,7 +154,7 @@ class Parser:
     def parseDeclVar(self) -> A.DeclVar:
         t = self.consome(TokenType.PRECEITO, "preceito")
         tipo = self.parseTipo()
-        nome = self.consome(TokenType.IDENTIFIER, "IDENT").lexema
+        nome = _nome_ident(self.consome(TokenType.IDENTIFIER, "IDENT"))
         valor = None
         if self.atual().tipo is TokenType.SEJA:
             self.pos += 1
@@ -160,7 +168,7 @@ class Parser:
         self.consome(TokenType.SEJA, "seja")
         valor = self.parseExpressaoOu()
         self.consome(TokenType.AMEM, "amém")
-        return A.Atribuicao(nome=nome_tok.lexema, valor=valor, linha=nome_tok.linha)
+        return A.Atribuicao(nome=_nome_ident(nome_tok), valor=valor, linha=nome_tok.linha)
 
     # ComandoSe ::= "caso" ExpressaoOu Bloco { "doutra_sorte_caso" ... } [ "doutra_sorte" Bloco ] "amém_senhor"
     def parseSe(self) -> A.Se:
@@ -202,8 +210,8 @@ class Parser:
     # ComandoParaCada ::= "em_cada" IDENT IDENT Bloco "amém_senhor"
     def parseParaCada(self) -> A.ParaCada:
         t = self.consome(TokenType.EM_CADA, "em_cada")
-        var = self.consome(TokenType.IDENTIFIER, "IDENT").lexema
-        col = self.consome(TokenType.IDENTIFIER, "IDENT").lexema
+        var = _nome_ident(self.consome(TokenType.IDENTIFIER, "IDENT"))
+        col = _nome_ident(self.consome(TokenType.IDENTIFIER, "IDENT"))
         corpo = self.parseBloco()
         self.consome(TokenType.AMEM_SENHOR, "amém_senhor")
         return A.ParaCada(variavel=var, colecao=col, corpo=corpo, linha=t.linha)
@@ -218,7 +226,7 @@ class Parser:
     # ComandoEntrada ::= "confesse" IDENT "amém"
     def parseEntrada(self) -> A.Entrada:
         t = self.consome(TokenType.CONFESSE, "confesse")
-        var = self.consome(TokenType.IDENTIFIER, "IDENT").lexema
+        var = _nome_ident(self.consome(TokenType.IDENTIFIER, "IDENT"))
         self.consome(TokenType.AMEM, "amém")
         return A.Entrada(variavel=var, linha=t.linha)
 
@@ -297,7 +305,7 @@ class Parser:
         tok = self.atual()
         if tok.tipo is TokenType.IDENTIFIER:
             self.pos += 1
-            return A.Identificador(nome=tok.lexema, linha=tok.linha)
+            return A.Identificador(nome=_nome_ident(tok), linha=tok.linha)
         if tok.tipo is TokenType.NUMBER_INT:
             self.pos += 1
             return A.Literal(tipo="int", valor=int(tok.lexema), linha=tok.linha)

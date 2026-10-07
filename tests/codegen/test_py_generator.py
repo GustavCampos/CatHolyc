@@ -22,23 +22,23 @@ def P(body: str) -> str:
 
 
 def test_precedence_sem_parens():
-    out = gen(P("preceito capítulo x seja 2 somado_a 3 multiplicado_por 4 amém"))
+    out = gen(P("preceito capítulo $x seja 2 somado_a 3 multiplicado_por 4 amém"))
     assert "x = 2 + 3 * 4" in out
 
 
 def test_parens_preservados():
-    out = gen(P("preceito capítulo x seja ( 2 somado_a 3 ) multiplicado_por 4 amém"))
+    out = gen(P("preceito capítulo $x seja ( 2 somado_a 3 ) multiplicado_por 4 amém"))
     assert "x = (2 + 3) * 4" in out
 
 
 def test_operadores_completos():
     out = gen(
         P(
-            "preceito capítulo a seja 7 amém "
-            "preceito capítulo b seja 2 amém "
-            "proclame a privado_de b amém "
-            "proclame a multiplicado_por b amém "
-            "proclame a dízimo_de b amém "
+            "preceito capítulo $a seja 7 amém "
+            "preceito capítulo $b seja 2 amém "
+            "proclame $a privado_de $b amém "
+            "proclame $a multiplicado_por $b amém "
+            "proclame $a dízimo_de $b amém "
         )
     )
     assert "a - b" in out and "a * b" in out and "a % b" in out
@@ -46,14 +46,14 @@ def test_operadores_completos():
 
 def test_divisao_int_usa_floor():
     out = gen(
-        P("preceito capítulo a seja 7 amém preceito capítulo b seja 2 amém proclame a partilhado_entre b amém")
+        P("preceito capítulo $a seja 7 amém preceito capítulo $b seja 2 amém proclame $a partilhado_entre $b amém")
     )
     assert "a // b" in out
 
 
 def test_divisao_float_usa_barra():
     out = gen(
-        P("preceito versículo a seja 7.0 amém preceito capítulo b seja 2 amém proclame a partilhado_entre b amém")
+        P("preceito versículo $a seja 7.0 amém preceito capítulo $b seja 2 amém proclame $a partilhado_entre $b amém")
     )
     assert "a / b" in out and "//" not in out
 
@@ -61,8 +61,8 @@ def test_divisao_float_usa_barra():
 def test_relacionais_e_logicos():
     out = gen(
         P(
-            "preceito capítulo a seja 1 amém preceito capítulo b seja 2 amém "
-            "caso a submisso_a b em_comunhão_com não_seja a conforme_a b proclame 1 amém amém_senhor"
+            "preceito capítulo $a seja 1 amém preceito capítulo $b seja 2 amém "
+            "caso $a submisso_a $b em_comunhão_com não_seja $a conforme_a $b proclame 1 amém amém_senhor"
         )
     )
     assert "while" not in out
@@ -72,11 +72,11 @@ def test_relacionais_e_logicos():
 def test_relacionais_tabela():
     out = gen(
         P(
-            "preceito capítulo a seja 1 amém "
-            "caso a exaltado_sobre 0 proclame 1 amém amém_senhor "
-            "caso a não_abaixo_de 1 proclame 1 amém amém_senhor "
-            "caso a não_acima_de 1 proclame 1 amém amém_senhor "
-            "caso a dissonante_de 2 proclame 1 amém amém_senhor"
+            "preceito capítulo $a seja 1 amém "
+            "caso $a exaltado_sobre 0 proclame 1 amém amém_senhor "
+            "caso $a não_abaixo_de 1 proclame 1 amém amém_senhor "
+            "caso $a não_acima_de 1 proclame 1 amém amém_senhor "
+            "caso $a dissonante_de 2 proclame 1 amém amém_senhor"
         )
     )
     assert "a > 0" in out and "a >= 1" in out and "a <= 1" in out and "a != 2" in out
@@ -85,9 +85,9 @@ def test_relacionais_tabela():
 def test_ou_e_unario_menos():
     out = gen(
         P(
-            "preceito dogma a seja verdade amém preceito dogma b seja falsidade amém "
-            "caso a ou_porventura b proclame 1 amém amém_senhor "
-            "preceito capítulo n seja privado_de 5 amém"
+            "preceito dogma $a seja verdade amém preceito dogma $b seja falsidade amém "
+            "caso $a ou_porventura $b proclame 1 amém amém_senhor "
+            "preceito capítulo $n seja privado_de 5 amém"
         )
     )
     assert "if a or b:" in out
@@ -96,16 +96,22 @@ def test_ou_e_unario_menos():
 
 
 def test_const_upper_e_referencia():
-    out = gen(P("mandamento capítulo c seja 1 amém proclame c amém"))
+    out = gen(P("mandamento capítulo $c seja 1 amém proclame $c amém"))
     assert "C = 1" in out and "print(C)" in out
+
+
+def test_dollar_stripped_in_py():
+    out = gen(P("preceito capítulo $idade seja 1 amém"))
+    assert "$" not in out
+    assert "idade = 1" in out
 
 
 def test_caso_elif_else():
     out = gen(
         P(
-            "preceito capítulo x seja 2 amém "
-            "caso x conforme_a 1 proclame 1 amém "
-            "doutra_sorte_caso x conforme_a 2 proclame 2 amém "
+            "preceito capítulo $x seja 2 amém "
+            "caso $x conforme_a 1 proclame 1 amém "
+            "doutra_sorte_caso $x conforme_a 2 proclame 2 amém "
             "doutra_sorte proclame 3 amém amém_senhor"
         )
     )
@@ -113,16 +119,16 @@ def test_caso_elif_else():
 
 
 def test_enquanto():
-    out = gen(P("preceito capítulo n seja 3 amém enquanto n exaltado_sobre 0 n seja n privado_de 1 amém amém_senhor"))
+    out = gen(P("preceito capítulo $n seja 3 amém enquanto $n exaltado_sobre 0 $n seja $n privado_de 1 amém amém_senhor"))
     assert "while n > 0:" in out
 
 
 def test_peregrine_desugar():
     out = gen(
         P(
-            "preceito capítulo i seja 1 amém preceito capítulo s seja 0 amém "
-            "peregrine i seja 1 amém i não_acima_de 5 amém i seja i somado_a 1 amém "
-            "s seja s somado_a i amém amém_senhor"
+            "preceito capítulo $i seja 1 amém preceito capítulo $s seja 0 amém "
+            "peregrine $i seja 1 amém $i não_acima_de 5 amém $i seja $i somado_a 1 amém "
+            "$s seja $s somado_a $i amém amém_senhor"
         )
     )
     assert "while i <= 5:" in out
@@ -133,16 +139,16 @@ def test_peregrine_desugar():
 
 
 def test_em_cada():
-    out = gen(P('preceito salmo t seja "oi" amém em_cada c t proclame c amém amém_senhor'))
+    out = gen(P('preceito salmo $t seja "oi" amém em_cada $c $t proclame $c amém amém_senhor'))
     assert "for c in t:" in out
 
 
 def test_confesse_casts():
     out = gen(
         P(
-            "preceito capítulo a amém preceito versículo b amém "
-            "preceito salmo s amém preceito dogma d amém "
-            "confesse a amém confesse b amém confesse s amém confesse d amém"
+            "preceito capítulo $a amém preceito versículo $b amém "
+            "preceito salmo $s amém preceito dogma $d amém "
+            "confesse $a amém confesse $b amém confesse $s amém confesse $d amém"
         )
     )
     assert "a = int(input())" in out
@@ -152,7 +158,7 @@ def test_confesse_casts():
 
 
 def test_sem_init_zero_default():
-    out = gen(P("preceito capítulo a amém preceito versículo b amém preceito salmo s amém preceito dogma d amém"))
+    out = gen(P("preceito capítulo $a amém preceito versículo $b amém preceito salmo $s amém preceito dogma $d amém"))
     assert "a = 0" in out and "b = 0.0" in out and 's = ""' in out and "d = False" in out
 
 
@@ -164,9 +170,9 @@ def test_string_escape_roundtrip():
 def test_shadow_renomeia():
     out = gen(
         P(
-            "preceito capítulo x seja 1 amém "
-            "caso verdade preceito capítulo x seja 2 amém proclame x amém amém_senhor "
-            "proclame x amém"
+            "preceito capítulo $x seja 1 amém "
+            "caso verdade preceito capítulo $x seja 2 amém proclame $x amém amém_senhor "
+            "proclame $x amém"
         )
     )
     assert "x = 1" in out
